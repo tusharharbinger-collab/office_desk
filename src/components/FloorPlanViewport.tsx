@@ -51,8 +51,31 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   const availableCount = desks.filter((d) => d.status === 'available').length;
   const bookedCount = desks.filter((d) => d.status === 'booked').length;
 
+  // Optimized blueprint dimensions (tightened to ~16:9 ratio for perfect screen filling)
   const mapW = activeArea === 'area-1' ? 1520 : 1680;
-  const mapH = activeArea === 'area-1' ? 1140 : 920;
+  const mapH = activeArea === 'area-1' ? 880 : 920;
+
+  // Keep blueprint within visible boundaries
+  const clampPan = useCallback(
+    (x: number, y: number, currentScale: number) => {
+      if (!viewportRef.current) return { x, y };
+      const vpW = viewportRef.current.clientWidth;
+      const vpH = viewportRef.current.clientHeight;
+      const renderW = mapW * currentScale;
+      const renderH = mapH * currentScale;
+
+      const minX = -(renderW - 120);
+      const maxX = vpW - 120;
+      const minY = -(renderH - 120);
+      const maxY = vpH - 120;
+
+      return {
+        x: Math.min(Math.max(x, minX), maxX),
+        y: Math.min(Math.max(y, minY), maxY)
+      };
+    },
+    [mapW, mapH]
+  );
 
   // Zoom towards a specific focal point (cursor or viewport center)
   const zoomAtPoint = useCallback(
@@ -66,27 +89,60 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       const pivotY = clientY !== undefined ? clientY - rect.top : rect.height / 2;
 
       // Keep (pivotX, pivotY) stationary while scaling
-      const newPanX = Math.round(pivotX - (pivotX - pan.x) * (clampedScale / scale));
-      const newPanY = Math.round(pivotY - (pivotY - pan.y) * (clampedScale / scale));
+      const rawPanX = Math.round(pivotX - (pivotX - pan.x) * (clampedScale / scale));
+      const rawPanY = Math.round(pivotY - (pivotY - pan.y) * (clampedScale / scale));
+      const clamped = clampPan(rawPanX, rawPanY, clampedScale);
 
       isUserInteractedRef.current = true;
       onScaleChange(clampedScale);
-      setPan({ x: newPanX, y: newPanY });
+      setPan(clamped);
     },
-    [scale, pan, onScaleChange]
+    [scale, pan, clampPan, onScaleChange]
   );
 
-  // Auto-fit floor plan to viewport dimensions (Fit All: width & height)
+  // Smart Adaptive Fit: On wide monitors, fills ~92% of the window width for prominent, large desks!
   const fitToScreen = useCallback(() => {
     if (!viewportRef.current) return;
     const { clientWidth, clientHeight } = viewportRef.current;
     if (clientWidth === 0 || clientHeight === 0) return;
 
-    const padX = clientWidth < 640 ? 16 : 40;
-    const padY = clientHeight < 640 ? 16 : 40;
+    const padX = clientWidth < 640 ? 12 : 32;
+    const padY = clientHeight < 640 ? 12 : 32;
     const scaleW = (clientWidth - padX) / mapW;
     const scaleH = (clientHeight - padY) / mapH;
-    const fitScale = Math.min(Math.max(Math.min(scaleW, scaleH), 0.3), 1.25);
+
+    let fitScale: number;
+    if (clientWidth >= 1024 && scaleW > scaleH * 1.15) {
+      // Widescreen view: Fill available width (between 78% and 100%) so desks are large and clear
+      fitScale = Math.min(Math.max(scaleW * 0.94, 0.78), 1.25);
+    } else {
+      // Standard fit: fit entire blueprint inside viewport
+      fitScale = Math.min(scaleW, scaleH);
+    }
+
+    const roundedScale = Number(fitScale.toFixed(2));
+    const centeredX = Math.round((clientWidth - mapW * roundedScale) / 2);
+    const centeredY =
+      mapH * roundedScale <= clientHeight
+        ? Math.round((clientHeight - mapH * roundedScale) / 2)
+        : 18;
+
+    isUserInteractedRef.current = false;
+    onScaleChange(roundedScale);
+    setPan({ x: centeredX, y: centeredY });
+  }, [mapW, mapH, onScaleChange]);
+
+  // Fit All: Forces entire blueprint inside view
+  const fitAll = useCallback(() => {
+    if (!viewportRef.current) return;
+    const { clientWidth, clientHeight } = viewportRef.current;
+    if (clientWidth === 0 || clientHeight === 0) return;
+
+    const padX = clientWidth < 640 ? 12 : 32;
+    const padY = clientHeight < 640 ? 12 : 32;
+    const scaleW = (clientWidth - padX) / mapW;
+    const scaleH = (clientHeight - padY) / mapH;
+    const fitScale = Math.min(Math.max(Math.min(scaleW, scaleH), 0.35), 1.2);
     const roundedScale = Number(fitScale.toFixed(2));
 
     const centeredX = Math.round((clientWidth - mapW * roundedScale) / 2);
@@ -95,21 +151,21 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
     isUserInteractedRef.current = false;
     onScaleChange(roundedScale);
     setPan({ x: centeredX, y: centeredY });
-  }, [activeArea, mapW, mapH, onScaleChange]);
+  }, [mapW, mapH, onScaleChange]);
 
-  // Fit Width: Scales to fill available horizontal screen width for large legible desks
+  // Fill Width: Scales to fill full window width
   const fitToWidth = useCallback(() => {
     if (!viewportRef.current) return;
     const { clientWidth } = viewportRef.current;
     if (clientWidth === 0) return;
 
-    const padX = clientWidth < 640 ? 16 : 48;
+    const padX = clientWidth < 640 ? 12 : 36;
     const scaleW = (clientWidth - padX) / mapW;
-    const fitScale = Math.min(Math.max(scaleW, 0.4), 1.5);
+    const fitScale = Math.min(Math.max(scaleW * 0.96, 0.5), 1.5);
     const roundedScale = Number(fitScale.toFixed(2));
 
     const centeredX = Math.round((clientWidth - mapW * roundedScale) / 2);
-    const topY = 24;
+    const topY = 18;
 
     isUserInteractedRef.current = false;
     onScaleChange(roundedScale);
@@ -142,14 +198,9 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
         prevSizeRef.current = { w: newW, h: newH };
 
         if (!isUserInteractedRef.current) {
-          // If in auto-fit mode, recalculate fit scale & centering
           fitToScreen();
         } else {
-          // If user manually zoomed/panned, adjust pan to keep center stable
-          setPan((prev) => ({
-            x: Math.round(prev.x + deltaW / 2),
-            y: Math.round(prev.y + deltaH / 2)
-          }));
+          setPan((prev) => clampPan(Math.round(prev.x + deltaW / 2), Math.round(prev.y + deltaH / 2), scale));
         }
       }
     });
@@ -160,9 +211,9 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [activeArea, fitToScreen]);
+  }, [activeArea, fitToScreen, clampPan, scale]);
 
-  // Mouse pan handlers with soft boundaries to prevent blueprint from disappearing
+  // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-desk-id]')) return;
     setIsDragging(true);
@@ -171,34 +222,24 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !viewportRef.current) return;
-    const vpW = viewportRef.current.clientWidth;
-    const vpH = viewportRef.current.clientHeight;
-    const renderW = mapW * scale;
-    const renderH = mapH * scale;
-
+    if (!isDragging) return;
     const rawX = e.clientX - dragStartRef.current.x;
     const rawY = e.clientY - dragStartRef.current.y;
-
-    // Keep at least 140px of map visible inside the viewport
-    const minX = -(renderW - 140);
-    const maxX = vpW - 140;
-    const minY = -(renderH - 140);
-    const maxY = vpH - 140;
-
-    setPan({
-      x: Math.min(Math.max(rawX, minX), maxX),
-      y: Math.min(Math.max(rawY, minY), maxY)
-    });
+    setPan(clampPan(rawX, rawY, scale));
   };
 
   const handleMouseUp = () => setIsDragging(false);
 
-  // Wheel zoom towards pointer
+  // Wheel handler: Normal scroll pans vertically/horizontally; Ctrl+wheel / pinch zooms!
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const zoomDelta = e.deltaY < 0 ? 0.09 : -0.09;
-    zoomAtPoint(scale + zoomDelta, e.clientX, e.clientY);
+    if (e.ctrlKey || e.metaKey) {
+      const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
+      zoomAtPoint(scale + zoomDelta, e.clientX, e.clientY);
+    } else {
+      isUserInteractedRef.current = true;
+      setPan((prev) => clampPan(prev.x - e.deltaX, prev.y - e.deltaY, scale));
+    }
   };
 
   // Touch handlers for mobile & tablet pinch/drag
@@ -222,7 +263,7 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
     if (e.touches.length === 1 && isDragging) {
       const rawX = e.touches[0].clientX - dragStartRef.current.x;
       const rawY = e.touches[0].clientY - dragStartRef.current.y;
-      setPan({ x: rawX, y: rawY });
+      setPan(clampPan(rawX, rawY, scale));
     } else if (e.touches.length === 2 && touchStartDistRef.current) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -345,10 +386,10 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
           <span className="material-symbols-outlined text-base">remove</span>
         </button>
 
-        {/* Current Zoom Percentage (Click to toggle 100% / Fit) */}
+        {/* Current Zoom Percentage */}
         <button
           onClick={() => (scale === 1 ? fitToScreen() : zoomAtPoint(1.0))}
-          className="px-2 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 flex items-center justify-center text-xs font-mono font-medium transition-all cursor-pointer min-w-[42px]"
+          className="px-2 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 flex items-center justify-center text-xs font-mono font-medium transition-all cursor-pointer min-w-[44px]"
           title="Click to toggle 100% / Auto-Fit"
         >
           {Math.round(scale * 100)}%
@@ -365,24 +406,24 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
 
         <div className="w-[1px] h-5 bg-white/[0.1] mx-0.5" />
 
-        {/* Fit All to Screen */}
-        <button
-          onClick={fitToScreen}
-          className="h-8 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-sky-400 flex items-center gap-1.5 text-xs transition-all cursor-pointer"
-          title="Fit entire blueprint inside window"
-        >
-          <span className="material-symbols-outlined text-base text-sky-400">crop_free</span>
-          <span className="hidden sm:inline text-[11px] font-medium">Fit</span>
-        </button>
-
-        {/* Fit Width (Fills Screen Width for Large Desks) */}
+        {/* Fill Width Button (Fills screen width for large, clear, readable workstations) */}
         <button
           onClick={fitToWidth}
-          className="hidden sm:flex h-8 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-emerald-400 items-center gap-1.5 text-xs transition-all cursor-pointer"
-          title="Fit blueprint to full window width (large legible workstations)"
+          className="h-8 px-2.5 rounded-xl bg-sky-500/15 text-sky-300 border border-sky-400/30 hover:bg-sky-500/25 flex items-center gap-1.5 text-xs transition-all cursor-pointer font-semibold shadow-sm"
+          title="Fit floor plan to full window width (large legible workstations)"
         >
-          <span className="material-symbols-outlined text-base text-emerald-400">fit_screen</span>
-          <span className="text-[11px] font-medium">Width</span>
+          <span className="material-symbols-outlined text-base text-sky-400">fit_screen</span>
+          <span className="text-[11px]">Fill Width</span>
+        </button>
+
+        {/* Fit All Button (Fits entire blueprint inside viewport) */}
+        <button
+          onClick={fitAll}
+          className="h-8 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white flex items-center gap-1.5 text-xs transition-all cursor-pointer"
+          title="Fit entire floor plan inside view"
+        >
+          <span className="material-symbols-outlined text-base text-slate-400">crop_free</span>
+          <span className="text-[11px] font-medium">Fit All</span>
         </button>
 
         {/* Minimap Radar Toggle */}

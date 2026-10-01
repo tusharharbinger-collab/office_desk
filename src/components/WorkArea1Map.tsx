@@ -29,7 +29,7 @@ export const WorkArea1Map: React.FC<WorkArea1MapProps> = ({
   const getDesk = (id: string) => desks.find((d) => d.id === id);
 
   return (
-    <div className="relative w-[1520px] h-[1140px] bg-surface-container-lowest/80 border-2 border-outline-variant/40 rounded-3xl p-8 shadow-2xl">
+    <div className="relative w-[1520px] h-[880px] bg-surface-container-lowest/80 border-2 border-outline-variant/40 rounded-3xl p-6 shadow-2xl">
       {/* Blueprint Architectural Stamp */}
       <div className="absolute top-3 left-6 flex items-center gap-2.5 text-outline/70 font-mono text-xs select-none">
         <span className="material-symbols-outlined text-primary text-base">architecture</span>
@@ -42,7 +42,7 @@ export const WorkArea1Map: React.FC<WorkArea1MapProps> = ({
       {/* ========================================================
           1. WEST PERIMETER WALL (LEFT WALL: 14 Desks + 2 Pillars)
          ======================================================== */}
-      <div className="absolute top-[80px] left-[40px] w-[100px] h-[980px] border-r-2 border-outline-variant/40 pr-3 flex flex-col justify-between">
+      <div className="absolute top-[75px] left-[35px] w-[100px] h-[770px] border-r-2 border-outline-variant/40 pr-3 flex flex-col justify-between">
         <div className="text-[10px] font-mono text-outline uppercase tracking-wider mb-2">
           West Wall
         </div>
@@ -652,7 +652,7 @@ export const WorkArea1Map: React.FC<WorkArea1MapProps> = ({
           6. ANCILLARY FACILITIES (BOTTOM-RIGHT)
          ======================================================== */}
       {/* Server Room */}
-      <div className="absolute bottom-[40px] right-[240px] w-[220px] h-[130px] bg-surface-container-low/70 border-2 border-outline-variant/40 rounded-xl p-3 flex flex-col justify-between">
+      <div className="absolute bottom-[25px] right-[240px] w-[220px] h-[130px] bg-surface-container-low/70 border-2 border-outline-variant/40 rounded-xl p-3 flex flex-col justify-between">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-outline text-lg">dns</span>
           <span className="text-xs font-semibold text-on-surface">Server Room</span>
@@ -670,7 +670,7 @@ export const WorkArea1Map: React.FC<WorkArea1MapProps> = ({
       </div>
 
       {/* Restrooms: Men & Women Toilets */}
-      <div className="absolute bottom-[40px] right-[40px] w-[180px] h-[210px] flex flex-col gap-3">
+      <div className="absolute bottom-[25px] right-[40px] w-[180px] h-[210px] flex flex-col gap-3">
         <div className="h-[95px] bg-surface-container-low/70 border-2 border-outline-variant/40 rounded-xl p-3 flex flex-col justify-between">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-outline text-lg">man</span>
