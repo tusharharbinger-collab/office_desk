@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #0f131c;
+    color: #dfe2ee;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f131c;
+}
+::-webkit-scrollbar-thumb {
+  background: #262a33;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3e4850;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(28, 32, 40, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(136, 146, 155, 0.2);
+}
+
+.glass-dropdown {
+  background: rgba(38, 42, 51, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(136, 146, 155, 0.3);
+}
+
+/* Glowing Neon Shadows */
+.glow-primary {
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+}
+.glow-secondary {
+  box-shadow: 0 0 16px rgba(78, 222, 163, 0.3);
+}
+.glow-error {
+  box-shadow: 0 0 16px rgba(255, 180, 171, 0.25);
+}
+.glow-tertiary {
+  box-shadow: 0 0 16px rgba(255, 185, 95, 0.25);
+}
+
+/* Tabular Numerals */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pulse animation for manager radar */
+@keyframes radar-pulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.animate-radar {
+  animation: radar-pulse 2s infinite ease-in-out;
+}

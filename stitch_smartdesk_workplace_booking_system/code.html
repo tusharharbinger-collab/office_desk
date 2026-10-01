@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-background": "#dfe2ee", "on-tertiary": "#472a00", "surface-container-high": "#262a33", "background": "#0f131c", "on-primary-fixed": "#001e2f", "secondary": "#4edea3", "on-error-container": "#ffdad6", "error": "#ffb4ab", "tertiary-fixed": "#ffddb8", "surface-container": "#1c2028", "on-secondary-container": "#00311f", "on-tertiary-fixed": "#2a1700", "primary-container": "#0ea5e9", "surface-container-highest": "#31353e", "inverse-on-surface": "#2c3039", "on-tertiary-fixed-variant": "#653e00", "on-tertiary-container": "#4a2c00", "surface-container-low": "#181c24", "on-primary-container": "#003751", "on-secondary-fixed-variant": "#005236", "surface-dim": "#0f131c", "surface-bright": "#353942", "surface-container-lowest": "#0a0e16", "on-surface": "#dfe2ee", "outline-variant": "#3e4850", "on-secondary-fixed": "#002113", "on-secondary": "#003824", "inverse-surface": "#dfe2ee", "on-error": "#690005", "outline": "#88929b", "secondary-container": "#00a572", "primary": "#89ceff", "secondary-fixed": "#6ffbbe", "primary-fixed": "#c9e6ff", "on-surface-variant": "#bec8d2", "secondary-fixed-dim": "#4edea3", "error-container": "#93000a", "on-primary": "#00344d", "surface-tint": "#89ceff", "tertiary-container": "#d88a00", "surface": "#0f131c", "primary-fixed-dim": "#89ceff", "inverse-primary": "#006591", "tertiary": "#ffb95f", "surface-variant": "#31353e", "on-primary-fixed-variant": "#004c6e", "tertiary-fixed-dim": "#ffb95f" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-md": "1rem", "space-lg": "1.5rem", "space-xl": "2.5rem", "gutter": "1.5rem", "space-sm": "0.5rem", "margin": "2rem", "space-xs": "0.25rem" }, "fontFamily": { "label-lg": ["Inter"], "headline-xl": ["Inter"], "body-lg": ["Inter"], "body-md": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "headline-lg": ["Inter"], "headline-sm": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"] }, "fontSize": { "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "500" }], "headline-md": ["22px", { "lineHeight": "28px", "fontWeight": "500" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }] } } } }</script><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-surface font-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-low/80 backdrop-blur-xl z-50 flex flex-col pt-space-xl pb-space-lg"><div class="px-space-lg mb-space-xl flex items-center gap-space-sm"><img alt="SmartDesk Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBh9ThQNvfLzT88hlXtO1GN4QOPEsD3zNCt9ReoabM-tt8vv21bVACUSGVRcbcxxtY5UuasNgroj3zEo4MBu1_eyeiU3zKGrQWeEuCnGy2LLI7w3kFn9xIzm0VV84KqEKuSDdaJxujRJI3iANoOD4qiLrq6OBRSrA76fzR7j5m7XVgKdVSn2h7GUvgF30HY38Bvw6onx-i09CPlHzB0tvApdzB6P3BouwIXb9T84Vj3UvuD6amVgFzKTA"/><span class="text-headline-sm font-headline-sm text-primary tracking-tight">SmartDesk</span></div><nav class="flex-1 px-space-md space-y-space-xs" data-active-classes="bg-primary-container text-on-primary-container font-medium rounded-xl shadow-[0_0_15px_rgba(14,165,233,0.3)]"><a aria-current="page" class="flex items-center px-space-md py-space-sm transition-all bg-primary-container text-on-primary-container font-medium rounded-xl shadow-[0_0_15px_rgba(14,165,233,0.3)]" data-path="floor-plan" href="#"><span class="material-symbols-outlined mr-space-md">map</span>Floor Plan</a><a class="flex items-center px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="time-scheduler" href="#"><span class="material-symbols-outlined mr-space-md">schedule</span>Time Grid</a><a class="flex items-center px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="my-bookings" href="#"><span class="material-symbols-outlined mr-space-md">bookmark</span>My Bookings</a><a class="flex items-center px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="analytics" href="#"><span class="material-symbols-outlined mr-space-md">analytics</span>Analytics</a></nav><div class="px-space-lg pt-space-md"><div class="p-space-md rounded-xl bg-surface-container border border-outline-variant/30 flex items-center justify-between"><div class="flex items-center gap-space-sm"><span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_#4edea3]"></span><span class="text-body-sm text-on-surface-variant">System Live</span></div><span class="text-label-sm text-primary">v2.4</span></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-20 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-xl"><div class="flex items-center gap-space-lg"><div class="flex bg-surface-container p-1 rounded-xl border border-outline-variant/30"><button class="px-space-md py-1.5 rounded-lg text-label-md bg-primary-container text-on-primary-container shadow-[0_0_10px_rgba(14,165,233,0.4)] transition-all">Work Area 1 <span class="opacity-70 text-label-sm">(130)</span></button><button class="px-space-md py-1.5 rounded-lg text-label-md text-on-surface-variant hover:text-on-surface transition-all">Work Area 2 <span class="opacity-70 text-label-sm">(80)</span></button></div><div class="flex items-center gap-space-sm bg-surface-container px-space-md py-1.5 rounded-xl border border-outline-variant/30 text-on-surface-variant"><span class="material-symbols-outlined text-[18px] text-primary">calendar_today</span><span class="text-label-md">Today, Oct 24</span></div><div class="flex items-center gap-space-sm bg-surface-container px-space-md py-1.5 rounded-xl border border-outline-variant/30 text-on-surface-variant"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span><span class="text-label-md">Full Day</span></div></div><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-md bg-surface-container px-space-lg py-1.5 rounded-xl border border-outline-variant/30"><div class="flex flex-col items-end"><span class="text-label-sm text-on-surface-variant">Live Capacity</span><span class="text-label-lg text-secondary font-headline-sm">84% Full</span></div><div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary"><span class="material-symbols-outlined text-[20px]">groups</span></div></div><div class="flex items-center gap-space-sm pl-space-md border-l border-outline-variant/30"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_10px_rgba(137,206,255,0.4)]"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex flex-col"><span class="text-label-md text-on-surface font-medium">Alex Mercer</span><span class="text-label-sm text-primary">Admin Role</span></div></div></div></header><main class="relative pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full text-on-surface bg-background min-h-screen relative overflow-hidden">
+<!-- Top Control Bar for Map Actions & Filters -->
+<div class="px-space-xl py-space-md flex flex-wrap items-center justify-between gap-space-md bg-surface-container/60 backdrop-blur-xl border-b border-outline-variant/20 z-20">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-sm bg-surface-container-high px-space-md py-2 rounded-xl border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary text-[20px]">layers</span>
+<span class="text-label-lg font-headline-sm text-on-surface">Blueprint View: Work Area 1</span>
+</div>
+<!-- Zoom Controls -->
+<div class="flex items-center bg-surface-container-high rounded-xl border border-outline-variant/30 p-0.5">
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-on-surface-variant hover:text-on-surface transition-all" id="zoom-out-btn" title="Zoom Out">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="px-space-sm text-label-md text-on-surface font-medium" id="zoom-level-text">100%</span>
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-on-surface-variant hover:text-on-surface transition-all" id="zoom-in-btn" title="Zoom In">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<button class="px-space-sm py-1 hover:bg-surface-container-highest rounded-lg text-label-sm text-primary transition-all border-l border-outline-variant/30 ml-1" id="zoom-reset-btn">Reset</button>
+</div>
+</div>
+<div class="flex items-center gap-space-lg">
+<!-- Live Presence Toggle -->
+<div class="flex items-center gap-space-sm bg-surface-container-high px-space-md py-1.5 rounded-xl border border-outline-variant/30">
+<span class="material-symbols-outlined text-secondary text-[18px]">radar</span>
+<span class="text-label-md text-on-surface-variant">Manager Live Presence</span>
+<label class="relative inline-flex items-center cursor-pointer ml-space-xs">
+<input class="sr-only peer" id="live-presence-toggle" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-lowest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+</div>
+<!-- Legend -->
+<div class="hidden lg:flex items-center gap-space-md text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-space-xs"><span class="w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3]"></span>Available</div>
+<div class="flex items-center gap-space-xs"><span class="w-3 h-3 rounded-full bg-primary-container shadow-[0_0_8px_#0ea5e9]"></span>Selected</div>
+<div class="flex items-center gap-space-xs"><span class="w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab]"></span>Booked</div>
+<div class="flex items-center gap-space-xs"><span class="w-3 h-3 rounded-full bg-tertiary shadow-[0_0_8px_#ffb95f]"></span>Hold</div>
+</div>
+</div>
+</div>
+<!-- Interactive Blueprint Canvas Container -->
+<div class="relative w-full h-[calc(100vh-160px)] overflow-hidden bg-surface cursor-grab active:cursor-grabbing select-none" id="blueprint-viewport">
+<!-- Glowing Grid Background Pattern -->
+<div class="absolute inset-0 bg-[radial-gradient(#31353e_1px,transparent_1px)] [background-size:32px_32px] opacity-40 pointer-events-none"></div>
+<!-- Zoomable / Pannable Workspace Surface -->
+<div class="absolute inset-0 w-[1800px] h-[1200px] origin-top-left transition-transform duration-75 ease-out" id="blueprint-canvas">
+<!-- Architectural Zone Labels / Outlines -->
+<div class="absolute top-[60px] left-[60px] w-[500px] h-[340px] border border-outline-variant/20 rounded-2xl bg-surface-container-lowest/30 pointer-events-none p-space-md flex flex-col justify-between">
+<span class="text-label-sm text-outline uppercase tracking-wider">Zone A // North Collaboration & Pods</span>
+<div class="absolute bottom-2 right-4 text-[10px] text-outline/40 font-mono">SEC-A1-NORTH</div>
+</div>
+<div class="absolute top-[60px] left-[590px] w-[540px] h-[340px] border border-outline-variant/20 rounded-2xl bg-surface-container-lowest/30 pointer-events-none p-space-md flex flex-col justify-between">
+<span class="text-label-sm text-outline uppercase tracking-wider">Zone B // Executive Boardroom & Suites</span>
+<div class="absolute bottom-2 right-4 text-[10px] text-outline/40 font-mono">SEC-B2-EXEC</div>
+</div>
+<div class="absolute top-[430px] left-[60px] w-[700px] h-[480px] border border-outline-variant/20 rounded-2xl bg-surface-container-lowest/30 pointer-events-none p-space-md flex flex-col justify-between">
+<span class="text-label-sm text-outline uppercase tracking-wider">Zone C // Central Modular Desks & Pillar Pod</span>
+<div class="absolute bottom-2 right-4 text-[10px] text-outline/40 font-mono">SEC-C3-CORE</div>
+</div>
+<div class="absolute top-[430px] left-[790px] w-[340px] h-[480px] border border-outline-variant/20 rounded-2xl bg-surface-container-lowest/30 pointer-events-none p-space-md flex flex-col justify-between">
+<span class="text-label-sm text-outline uppercase tracking-wider">Zone D // Right Perimeter</span>
+<div class="absolute bottom-2 right-4 text-[10px] text-outline/40 font-mono">SEC-D4-EAST</div>
+</div>
+<!-- Architectural Pillars -->
+<div class="absolute top-[520px] left-[400px] w-16 h-16 bg-surface-container-highest rounded-xl border border-outline-variant/40 shadow-inner flex items-center justify-center pointer-events-none">
+<span class="text-label-xs text-outline font-mono">PILLAR 1</span>
+</div>
+<div class="absolute top-[700px] left-[400px] w-16 h-16 bg-surface-container-highest rounded-xl border border-outline-variant/40 shadow-inner flex items-center justify-center pointer-events-none">
+<span class="text-label-xs text-outline font-mono">PILLAR 2</span>
+</div>
+<!-- SEAT NODES (Interactive elements) -->
+<!-- Left Perimeter Desks -->
+<div class="absolute top-[100px] left-[90px] flex flex-col gap-3">
+<!-- Seat Node -->
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP1-01" data-pod="Left Perimeter" data-status="available">
+<span class="text-label-xs text-secondary font-mono">01</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 hover:border-error flex items-center justify-center transition-all hover:scale-110 opacity-70" data-amenities="Single Ultrawide, Ergonomic Chair, USB-C Dock" data-desk-code="WA1-BP1-02" data-pod="Left Perimeter" data-status="booked">
+<span class="text-label-xs text-error font-mono">02</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+<!-- Manager Badge (Hidden by default) -->
+<div class="presence-badge hidden absolute -top-3 -left-3 w-7 h-7 rounded-full border-2 border-primary bg-surface-container-highest bg-cover bg-center shadow-lg" data-alt="Close up portrait of a smiling software engineer with short dark hair, wearing a casual navy blue t-shirt, studio lighting against a dark slate background." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB5zZ5Y6TjJLyd2v1xqN9KM6FYbJGs4-VMwB6mAv-gftL36Mfm4aoosbdzU4jGVElvym6E1d5TTMUZKN-PxFh1j5n92ipKK5GnOxpiJqahU1h73UmCxx65_YFZeoWlYi0m5vKRFrE2yLaynZgMLs6I46pxvsOZ_04yvGjl_BBObu6aWFUfeKRTggkbJuvzSa47ZpwZrPv1Aq5e49upTB39Ts34aUbX7LoEJ3vNzI5KM6q0w63zvleTcig')">
+<span class="absolute -bottom-1 -right-1 bg-primary text-on-primary text-[8px] px-1 rounded-full font-bold">4h</span>
+</div>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP1-03" data-pod="Left Perimeter" data-status="available">
+<span class="text-label-xs text-secondary font-mono">03</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-tertiary/40 hover:border-tertiary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standard Desk, Power Outlet" data-desk-code="WA1-BP1-04" data-pod="Left Perimeter" data-status="hold">
+<span class="text-label-xs text-tertiary font-mono">04</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-tertiary shadow-[0_0_8px_#ffb95f] status-dot"></span>
+</button>
+</div>
+<div class="absolute top-[100px] left-[160px] flex flex-col gap-3">
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP1-05" data-pod="Left Perimeter" data-status="available">
+<span class="text-label-xs text-secondary font-mono">05</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 hover:border-error flex items-center justify-center transition-all hover:scale-110 opacity-70" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP1-06" data-pod="Left Perimeter" data-status="booked">
+<span class="text-label-xs text-error font-mono">06</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Single Ultrawide, Standing Desk" data-desk-code="WA1-BP1-07" data-pod="Left Perimeter" data-status="available">
+<span class="text-label-xs text-secondary font-mono">07</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP1-08" data-pod="Left Perimeter" data-status="available">
+<span class="text-label-xs text-secondary font-mono">08</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+</div>
+<!-- North Pods -->
+<div class="absolute top-[120px] left-[260px] grid grid-cols-4 gap-4">
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP2-01" data-pod="North Pod A" data-status="available">
+<span class="text-label-xs text-secondary font-mono">N1</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP2-02" data-pod="North Pod A" data-status="available">
+<span class="text-label-xs text-secondary font-mono">N2</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<!-- The Target Featured Seat pre-selected for demo -->
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-primary-container border-2 border-primary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_20px_rgba(14,165,233,0.6)]" data-amenities="Dual 4K Monitor, Standing Desk, Power Outlet" data-desk-code="WA1-BP2-04" data-pod="North Pod A" data-status="selected">
+<span class="text-label-xs text-on-primary-container font-bold font-mono">04</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary shadow-[0_0_8px_#89ceff] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 hover:border-error flex items-center justify-center transition-all hover:scale-110 opacity-70" data-amenities="Single Ultrawide, Standing Desk" data-desk-code="WA1-BP2-03" data-pod="North Pod A" data-status="booked">
+<span class="text-label-xs text-error font-mono">N3</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+<div class="presence-badge hidden absolute -top-3 -left-3 w-7 h-7 rounded-full border-2 border-secondary bg-surface-container-highest bg-cover bg-center shadow-lg" data-alt="Professional headshot of a female product manager with blonde hair tied back, wearing a sleek grey blazer and smiling warmly." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDErKwR3C1Uwfdj91l5jayMAsUwFlcclRRF7ZMWyN3EC7F20tvbUj32tn8VbWZj-FuvgiqgCOApMomQKS7Ub3q3OezcCpy7xz66zUdD-jBzGbROixXfzvH21A9L3ydh07TwqON8hEqLkQNrqAeP24maAMvJvgyYlRwnPk97LBhRiJCxVBWsf4oVBlRL4HTLw-DK7_wx2kCOCOFWycHO3Bi43xZw7H7NPb5M7RcWbN3ppdbMsSLfOaUEuw')">
+<span class="absolute -bottom-1 -right-1 bg-secondary text-on-secondary text-[8px] px-1 rounded-full font-bold">2h</span>
+</div>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-BP2-05" data-pod="North Pod B" data-status="available">
+<span class="text-label-xs text-secondary font-mono">N5</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-tertiary/40 hover:border-tertiary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-BP2-06" data-pod="North Pod B" data-status="hold">
+<span class="text-label-xs text-tertiary font-mono">N6</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-tertiary shadow-[0_0_8px_#ffb95f] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-BP2-07" data-pod="North Pod B" data-status="available">
+<span class="text-label-xs text-secondary font-mono">N7</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 hover:border-error flex items-center justify-center transition-all hover:scale-110 opacity-70" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-BP2-08" data-pod="North Pod B" data-status="booked">
+<span class="text-label-xs text-error font-mono">N8</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+</button>
+</div>
+<!-- Executive Boardroom & Office Suite (Top Right) -->
+<div class="absolute top-[100px] left-[630px] w-[460px] h-[280px] bg-surface-container-low/60 rounded-2xl border border-outline-variant/30 p-space-md flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">meeting_room</span>
+<span class="text-headline-sm font-headline-sm text-on-surface">Executive Boardroom & Suite</span>
+</div>
+<span class="text-label-sm px-2 py-0.5 rounded bg-primary-container/20 text-primary font-mono">SEC-EXEC-01</span>
+</div>
+<div class="grid grid-cols-5 gap-3 my-auto">
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 flex items-center justify-center opacity-80" data-amenities="Private Office, Herman Miller Chair, Conference Screen" data-desk-code="EX-SUITE-01" data-pod="Executive Suite" data-status="booked">
+<span class="text-label-xs text-error font-mono">EX1</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+<div class="presence-badge hidden absolute -top-3 -left-3 w-7 h-7 rounded-full border-2 border-error bg-surface-container-highest bg-cover bg-center shadow-lg" data-alt="Portrait of a senior executive leader with silver hair in a sharp charcoal suit, confident expression in a high-rise office." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDgX2yBOiLHHgSo2to-IH9EBs5XMEZ-licWHsPlKz4lypchXDL0aJdIHhnS3vTDSU7rFllbgSHv4Bm_rePoBaBQ9ms0dy0MeODXMDO2j8Ad3qud6BRKpm0ZHFqkvY11OwKhA8zM3UEGIQCdthwpvaLefv58vTv8mdpeWSTyQHyFrsVsT9aUFIDJGH7XyNptGG__mYpCDbcL3xr8Z6HYrwtznaXyP22YEJMd39Vxm9aIGJ5O1JDf8F4AzQ')">
+<span class="absolute -bottom-1 -right-1 bg-error text-on-error text-[8px] px-1 rounded-full font-bold">6h</span>
+</div>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Private Office, Herman Miller Chair, Conference Screen" data-desk-code="EX-SUITE-02" data-pod="Executive Suite" data-status="available">
+<span class="text-label-xs text-secondary font-mono">EX2</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Private Office, Herman Miller Chair" data-desk-code="EX-SUITE-03" data-pod="Executive Suite" data-status="available">
+<span class="text-label-xs text-secondary font-mono">EX3</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-tertiary/40 hover:border-tertiary flex items-center justify-center transition-all hover:scale-110" data-amenities="Private Office, Herman Miller Chair" data-desk-code="EX-SUITE-04" data-pod="Executive Suite" data-status="hold">
+<span class="text-label-xs text-tertiary font-mono">EX4</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-tertiary shadow-[0_0_8px_#ffb95f] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 flex items-center justify-center opacity-80" data-amenities="Private Office, Herman Miller Chair" data-desk-code="EX-SUITE-05" data-pod="Executive Suite" data-status="booked">
+<span class="text-label-xs text-error font-mono">EX5</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+</button>
+</div>
+<div class="flex items-center justify-between text-body-sm text-on-surface-variant">
+<span>Status: Restricted Access</span>
+<span class="text-primary font-medium">VIP Tier</span>
+</div>
+</div>
+<!-- Central Pods & Pillar Pod Cluster -->
+<div class="absolute top-[480px] left-[100px] grid grid-cols-6 gap-4">
+<!-- Loop to generate central cluster seats -->
+<script>
+          // Rendered via static markup for robustness
+        </script>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-01" data-pod="Central Pod Alpha" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C1</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-02" data-pod="Central Pod Alpha" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C2</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 flex items-center justify-center opacity-70" data-amenities="Single Ultrawide, Standard Desk" data-desk-code="WA1-CEN-03" data-pod="Central Pod Alpha" data-status="booked">
+<span class="text-label-xs text-error font-mono">C3</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-04" data-pod="Central Pod Alpha" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C4</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-05" data-pod="Central Pod Alpha" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C5</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-tertiary/40 flex items-center justify-center" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-06" data-pod="Central Pod Alpha" data-status="hold">
+<span class="text-label-xs text-tertiary font-mono">C6</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-tertiary shadow-[0_0_8px_#ffb95f] status-dot"></span>
+</button>
+</div>
+<div class="absolute top-[560px] left-[100px] grid grid-cols-6 gap-4">
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-07" data-pod="Central Pod Beta" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C7</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 flex items-center justify-center opacity-70" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-08" data-pod="Central Pod Beta" data-status="booked">
+<span class="text-label-xs text-error font-mono">C8</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-09" data-pod="Central Pod Beta" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C9</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-10" data-pod="Central Pod Beta" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C10</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-11" data-pod="Central Pod Beta" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C11</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Standing Desk" data-desk-code="WA1-CEN-12" data-pod="Central Pod Beta" data-status="available">
+<span class="text-label-xs text-secondary font-mono">C12</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+</div>
+<!-- Right Pods (East Zone) -->
+<div class="absolute top-[480px] left-[820px] grid grid-cols-3 gap-4">
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Ergonomic Seating" data-desk-code="WA1-EAST-01" data-pod="Right Pod East" data-status="available">
+<span class="text-label-xs text-secondary font-mono">E1</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-error/40 flex items-center justify-center opacity-70" data-amenities="Dual 4K Monitor, Ergonomic Seating" data-desk-code="WA1-EAST-02" data-pod="Right Pod East" data-status="booked">
+<span class="text-label-xs text-error font-mono">E2</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-error shadow-[0_0_8px_#ffb4ab] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Ergonomic Seating" data-desk-code="WA1-EAST-03" data-pod="Right Pod East" data-status="available">
+<span class="text-label-xs text-secondary font-mono">E3</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Ergonomic Seating" data-desk-code="WA1-EAST-04" data-pod="Right Pod East" data-status="available">
+<span class="text-label-xs text-secondary font-mono">E4</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-tertiary/40 flex items-center justify-center" data-amenities="Dual 4K Monitor, Ergonomic Seating" data-desk-code="WA1-EAST-05" data-pod="Right Pod East" data-status="hold">
+<span class="text-label-xs text-tertiary font-mono">E5</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-tertiary shadow-[0_0_8px_#ffb95f] status-dot"></span>
+</button>
+<button class="seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110" data-amenities="Dual 4K Monitor, Ergonomic Seating" data-desk-code="WA1-EAST-06" data-pod="Right Pod East" data-status="available">
+<span class="text-label-xs text-secondary font-mono">E6</span>
+<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-secondary shadow-[0_0_8px_#4edea3] status-dot"></span>
+</button>
+</div>
+</div>
+</div>
+<!-- Interactive Hover Tooltip Popover -->
+<div class="fixed pointer-events-none hidden z-50 bg-surface-container-high/95 backdrop-blur-xl border border-outline-variant/40 p-space-md rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] w-72 transition-opacity duration-150" id="seat-tooltip">
+<div class="flex items-center justify-between mb-2 pb-2 border-b border-outline-variant/30">
+<span class="text-headline-sm font-headline-sm text-primary font-mono" id="tooltip-desk-code">WA1-BP2-04</span>
+<span class="px-2 py-0.5 rounded-full text-label-sm uppercase tracking-wider bg-secondary/10 text-secondary" id="tooltip-status-badge">Available</span>
+</div>
+<div class="space-y-1.5 text-body-sm text-on-surface-variant">
+<div class="flex justify-between"><span class="text-outline">Pod Area:</span> <span class="text-on-surface font-medium" id="tooltip-pod">North Pod A</span></div>
+<div class="flex justify-between"><span class="text-outline">Amenities:</span> <span class="text-on-surface text-right truncate max-w-[160px]" id="tooltip-amenities">Dual 4K, Standing</span></div>
+</div>
+</div>
+<!-- Floating Bottom Booking Bar (BookMyShow style) -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-4xl bg-surface-container-high/90 backdrop-blur-2xl border border-outline-variant/40 rounded-2xl px-space-xl py-space-md flex flex-wrap items-center justify-between gap-space-md shadow-[0_20px_50px_rgba(0,0,0,0.6)]" id="booking-bar">
+<div class="flex items-center gap-space-lg">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[24px]">bookmark_check</span>
+</div>
+<div>
+<div class="flex items-center gap-space-sm">
+<span class="text-headline-sm font-headline-sm text-on-surface" id="bar-seat-title">Seat WA1-BP2-04 Selected</span>
+<span class="text-label-sm bg-secondary/20 text-secondary px-2 py-0.5 rounded font-mono">Ready to Reserve</span>
+</div>
+<p class="text-body-sm text-on-surface-variant">North Pod A // Dual 4K Monitor, Standing Desk</p>
+</div>
+</div>
+<div class="flex items-center gap-space-lg">
+<!-- Duration Selector Summary -->
+<div class="hidden md:flex flex-col text-right">
+<span class="text-label-sm text-on-surface-variant">Duration</span>
+<select class="bg-surface-container border border-outline-variant/30 rounded-lg px-3 py-1 text-label-md text-on-surface focus:outline-none focus:border-primary" id="booking-duration-select">
+<option>Full Day (8h)</option>
+<option>Morning (4h)</option>
+<option>Afternoon (4h)</option>
+</select>
+</div>
+<!-- Glowing CTA Button -->
+<button class="px-space-xl py-3 rounded-xl bg-primary text-on-primary font-label-lg font-medium shadow-[0_0_20px_rgba(137,206,255,0.4)] hover:shadow-[0_0_30px_rgba(137,206,255,0.7)] hover:bg-primary-fixed transition-all flex items-center gap-space-sm" id="confirm-reservation-btn">
+<span>Confirm Reservation</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Minimap Widget (Bottom Right Floating) -->
+<div class="fixed bottom-28 right-8 w-44 h-28 bg-surface-container-high/80 backdrop-blur-xl border border-outline-variant/30 rounded-xl overflow-hidden shadow-2xl z-30 hidden lg:block pointer-events-none">
+<div class="absolute inset-0 p-2 flex flex-col justify-between">
+<div class="flex justify-between items-center text-[10px] text-outline uppercase font-mono">
+<span>Minimap</span>
+<span>WA-1</span>
+</div>
+<div class="relative w-full h-16 bg-surface-container-lowest/80 rounded border border-outline-variant/20 overflow-hidden">
+<!-- Viewport rect indicator -->
+<div class="absolute top-2 left-2 w-16 h-10 border border-primary bg-primary/20 rounded transition-all duration-75" id="minimap-indicator"></div>
+</div>
+</div>
+</div>
+<!-- Vanilla JS Interactivity -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('blueprint-canvas');
+      const viewport = document.getElementById('blueprint-viewport');
+      const zoomInBtn = document.getElementById('zoom-in-btn');
+      const zoomOutBtn = document.getElementById('zoom-out-btn');
+      const zoomResetBtn = document.getElementById('zoom-reset-btn');
+      const zoomLevelText = document.getElementById('zoom-level-text');
+      const minimapIndicator = document.getElementById('minimap-indicator');
+      const liveToggle = document.getElementById('live-presence-toggle');
+      const presenceBadges = document.querySelectorAll('.presence-badge');
+      
+      const tooltip = document.getElementById('seat-tooltip');
+      const tooltipCode = document.getElementById('tooltip-desk-code');
+      const tooltipPod = document.getElementById('tooltip-pod');
+      const tooltipAmenities = document.getElementById('tooltip-amenities');
+      const tooltipStatus = document.getElementById('tooltip-status-badge');
+      
+      const barSeatTitle = document.getElementById('bar-seat-title');
+      const confirmBtn = document.getElementById('confirm-reservation-btn');
+      const seatNodes = document.querySelectorAll('.seat-node');
+
+      let scale = 1;
+      let panX = -100;
+      let panY = -50;
+      let isDragging = false;
+      let startX, startY;
+
+      // Initialize Transform
+      updateTransform();
+
+      function updateTransform() {
+        canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        zoomLevelText.innerText = Math.round(scale * 100) + '%';
+        
+        // Update minimap indicator position relative to pan
+        if (minimapIndicator) {
+          const maxPanX = 1800 * scale - viewport.clientWidth;
+          const maxPanY = 1200 * scale - viewport.clientHeight;
+          const pctX = Math.max(0, Math.min(1, -panX / (maxPanX || 1000)));
+          const pctY = Math.max(0, Math.min(1, -panY / (maxPanY || 1000)));
+          minimapIndicator.style.left = (pctX * 70) + 'px';
+          minimapIndicator.style.top = (pctY * 30) + 'px';
+        }
+      }
+
+      // Zoom Controls
+      zoomInBtn.addEventListener('click', () => {
+        scale = Math.min(scale + 0.15, 2.0);
+        updateTransform();
+      });
+
+      zoomOutBtn.addEventListener('click', () => {
+        scale = Math.max(scale - 0.15, 0.6);
+        updateTransform();
+      });
+
+      zoomResetBtn.addEventListener('click', () => {
+        scale = 1;
+        panX = -50;
+        panY = -30;
+        updateTransform();
+      });
+
+      // Pan Dragging
+      viewport.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.seat-node')) return;
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        updateTransform();
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      // Pinch / Wheel Zoom
+      viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomDelta = e.deltaY < 0 ? 0.1 : -0.1;
+        scale = Math.min(Math.max(scale + zoomDelta, 0.6), 2.0);
+        updateTransform();
+      }, { passive: false });
+
+      // Live Presence Mode Toggle
+      liveToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          presenceBadges.forEach(badge => badge.classList.remove('hidden'));
+        } else {
+          presenceBadges.forEach(badge => badge.classList.add('hidden'));
+        }
+      });
+
+      // Seat Selection & Click Handler
+      seatNodes.forEach(seat => {
+        seat.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const status = seat.getAttribute('data-status');
+          if (status === 'booked') {
+            alert('This seat is already booked by another team member.');
+            return;
+          }
+
+          // Deselect previous
+          seatNodes.forEach(s => {
+            if (s.getAttribute('data-status') === 'selected') {
+              s.setAttribute('data-status', 'available');
+              s.className = "seat-node relative group w-12 h-12 rounded-xl bg-surface-container border border-secondary/40 hover:border-secondary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_10px_rgba(78,222,163,0.15)]";
+            }
+          });
+
+          // Select new
+          seat.setAttribute('data-status', 'selected');
+          seat.className = "seat-node relative group w-12 h-12 rounded-xl bg-primary-container border-2 border-primary flex items-center justify-center transition-all hover:scale-110 shadow-[0_0_20px_rgba(14,165,233,0.6)]";
+          
+          const code = seat.getAttribute('data-desk-code');
+          const pod = seat.getAttribute('data-pod');
+          const amenities = seat.getAttribute('data-amenities');
+
+          barSeatTitle.innerText = `Seat ${code} Selected`;
+          document.querySelector('#booking-bar p').innerText = `${pod} // ${amenities}`;
+        });
+
+        // Hover Tooltip
+        seat.addEventListener('mouseenter', (e) => {
+          const code = seat.getAttribute('data-desk-code');
+          const pod = seat.getAttribute('data-pod');
+          const amenities = seat.getAttribute('data-amenities');
+          const status = seat.getAttribute('data-status');
+
+          tooltipCode.innerText = code;
+          tooltipPod.innerText = pod;
+          tooltipAmenities.innerText = amenities;
+          tooltipStatus.innerText = status;
+          
+          if(status === 'available') {
+            tooltipStatus.className = "px-2 py-0.5 rounded-full text-label-sm uppercase tracking-wider bg-secondary/10 text-secondary";
+          } else if(status === 'booked') {
+            tooltipStatus.className = "px-2 py-0.5 rounded-full text-label-sm uppercase tracking-wider bg-error/10 text-error";
+          } else if(status === 'hold') {
+            tooltipStatus.className = "px-2 py-0.5 rounded-full text-label-sm uppercase tracking-wider bg-tertiary/10 text-tertiary";
+          } else {
+            tooltipStatus.className = "px-2 py-0.5 rounded-full text-label-sm uppercase tracking-wider bg-primary/10 text-primary";
+          }
+
+          tooltip.style.left = (e.clientX + 15) + 'px';
+          tooltip.style.top = (e.clientY + 15) + 'px';
+          tooltip.classList.remove('hidden');
+        });
+
+        seat.addEventListener('mousemove', (e) => {
+          tooltip.style.left = (e.clientX + 15) + 'px';
+          tooltip.style.top = (e.clientY + 15) + 'px';
+        });
+
+        seat.addEventListener('mouseleave', () => {
+          tooltip.classList.add('hidden');
+        });
+      });
+
+      // Confirm Booking Action
+      confirmBtn.addEventListener('click', () => {
+        const selectedSeat = document.querySelector('[data-status="selected"]');
+        if (!selectedSeat) {
+          alert('Please select an available seat first.');
+          return;
+        }
+        const code = selectedSeat.getAttribute('data-desk-code');
+        alert(`Success! Reservation confirmed for ${code}. Pass has been added to My Bookings.`);
+      });
+    });
+  </script>
+</div></main></div></body></html>

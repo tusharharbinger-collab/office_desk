@@ -1,0 +1,73 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "on-background": "#dfe2ee",
+        "on-tertiary": "#472a00",
+        "surface-container-high": "#262a33",
+        "background": "#0f131c",
+        "on-primary-fixed": "#001e2f",
+        "secondary": "#4edea3",
+        "on-error-container": "#ffdad6",
+        "error": "#ffb4ab",
+        "tertiary-fixed": "#ffddb8",
+        "surface-container": "#1c2028",
+        "on-secondary-container": "#00311f",
+        "on-tertiary-fixed": "#2a1700",
+        "primary-container": "#0ea5e9",
+        "surface-container-highest": "#31353e",
+        "inverse-on-surface": "#2c3039",
+        "on-tertiary-fixed-variant": "#653e00",
+        "on-tertiary-container": "#4a2c00",
+        "surface-container-low": "#181c24",
+        "on-primary-container": "#003751",
+        "on-secondary-fixed-variant": "#005236",
+        "surface-dim": "#0f131c",
+        "surface-bright": "#353942",
+        "surface-container-lowest": "#0a0e16",
+        "on-surface": "#dfe2ee",
+        "outline-variant": "#3e4850",
+        "on-secondary-fixed": "#002113",
+        "on-secondary": "#003824",
+        "inverse-surface": "#dfe2ee",
+        "on-error": "#690005",
+        "outline": "#88929b",
+        "secondary-container": "#00a572",
+        "primary": "#89ceff",
+        "secondary-fixed": "#6ffbbe",
+        "primary-fixed": "#c9e6ff",
+        "on-surface-variant": "#bec8d2",
+        "secondary-fixed-dim": "#4edea3",
+        "error-container": "#93000a",
+        "on-primary": "#00344d",
+        "surface-tint": "#89ceff",
+        "tertiary-container": "#d88a00",
+        "surface": "#0f131c",
+        "primary-fixed-dim": "#89ceff",
+        "inverse-primary": "#006591",
+        "tertiary": "#ffb95f",
+        "surface-variant": "#31353e",
+        "on-primary-fixed-variant": "#004c6e",
+        "tertiary-fixed-dim": "#ffb95f"
+      },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "2xl": "1rem",
+        "full": "9999px"
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "Courier New", "monospace"]
+      }
+    },
+  },
+  plugins: [],
+}

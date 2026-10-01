@@ -1,0 +1,593 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { UserProfile, Role } from '../types';
+import {
+  getTodayISODate,
+  getTomorrowISODate,
+  formatDisplayDate,
+  TIME_SLOTS
+} from '../utils/dateTime';
+
+interface HeaderProps {
+  activeArea: 'area-1' | 'area-2';
+  onAreaChange: (area: 'area-1' | 'area-2') => void;
+  // Date & Time slot filtering
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+  selectedTimeSlot: string;
+  onTimeSlotChange: (slotId: string, customStart?: string, customEnd?: string) => void;
+  startTime: string;
+  endTime: string;
+  onCustomTimeChange?: (start: string, end: string) => void;
+  // Current user & switchers
+  currentUser: UserProfile;
+  allUsers: UserProfile[];
+  onSwitchUser: (user: UserProfile) => void;
+  onOpenRegister: () => void;
+  occupancyRate: number;
+  totalSeats: number;
+  bookedSeats: number;
+  // Unified controls from secondary bar
+  scale: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  showPresence: boolean;
+  onTogglePresence: (val: boolean) => void;
+  // Sidebar toggle
+  isSidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+  onLogout?: () => void;
+  onGoToLanding?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  activeArea,
+  onAreaChange,
+  selectedDate,
+  onDateChange,
+  selectedTimeSlot,
+  onTimeSlotChange,
+  startTime,
+  endTime,
+  onCustomTimeChange,
+  currentUser,
+  allUsers,
+  onSwitchUser,
+  onOpenRegister,
+  occupancyRate,
+  totalSeats,
+  bookedSeats,
+  searchQuery,
+  onSearchChange,
+  showPresence,
+  onTogglePresence,
+  isSidebarCollapsed,
+  onToggleSidebar,
+  onLogout,
+  onGoToLanding
+}) => {
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [dateTimeOpen, setDateTimeOpen] = useState(false);
+  const dateTimeRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dateTimeRef.current && !dateTimeRef.current.contains(e.target as Node)) {
+        setDateTimeOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    }
+    if (dateTimeOpen || userDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dateTimeOpen, userDropdownOpen]);
+
+  const getRoleBadge = (role: Role) => {
+    switch (role) {
+      case 'admin':
+        return 'text-sky-400 bg-sky-500/15 border-sky-500/30';
+      case 'manager':
+        return 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
+      case 'user':
+        return 'text-amber-400 bg-amber-500/15 border-amber-500/30';
+    }
+  };
+
+  const todayIso = getTodayISODate();
+  const tomorrowIso = getTomorrowISODate();
+
+  return (
+    <header
+      className={`fixed top-0 right-0 h-14 z-40 bg-[#0B0F17]/90 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.5)] flex items-center justify-between px-3.5 sm:px-5 transition-all duration-200 select-none ${
+        isSidebarCollapsed ? 'left-16' : 'left-60'
+      }`}
+    >
+      {/* ========================================================
+          LEFT SECTION: Sidebar Toggle + Segmented Area + Date/Time
+         ======================================================== */}
+      <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+        {/* Toggle Sidebar Button */}
+        <button
+          onClick={onToggleSidebar}
+          className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm"
+          title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        >
+          <span className="material-symbols-outlined text-[20px]">
+            {isSidebarCollapsed ? 'menu_open' : 'menu'}
+          </span>
+        </button>
+
+        {/* Segmented Area Switcher (Apple/Linear Style) */}
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9">
+          <button
+            onClick={() => onAreaChange('area-1')}
+            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              activeArea === 'area-1'
+                ? 'bg-sky-500/15 text-sky-300 font-semibold border border-sky-400/30 shadow-[0_0_12px_rgba(14,165,233,0.15)]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium'
+            }`}
+          >
+            <span>Area 1</span>
+            <span
+              className={`text-[10px] font-mono px-1 py-0.2 rounded ${
+                activeArea === 'area-1'
+                  ? 'bg-sky-400/20 text-sky-200 font-bold'
+                  : 'text-slate-500'
+              }`}
+            >
+              130
+            </span>
+          </button>
+
+          <button
+            onClick={() => onAreaChange('area-2')}
+            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              activeArea === 'area-2'
+                ? 'bg-sky-500/15 text-sky-300 font-semibold border border-sky-400/30 shadow-[0_0_12px_rgba(14,165,233,0.15)]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium'
+            }`}
+          >
+            <span>Area 2</span>
+            <span
+              className={`text-[10px] font-mono px-1 py-0.2 rounded ${
+                activeArea === 'area-2'
+                  ? 'bg-sky-400/20 text-sky-200 font-bold'
+                  : 'text-slate-500'
+              }`}
+            >
+              80
+            </span>
+          </button>
+        </div>
+
+        {/* Interactive Date & Shift Selector Capsule */}
+        <div className="relative" ref={dateTimeRef}>
+          <button
+            onClick={() => setDateTimeOpen(!dateTimeOpen)}
+            className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm group ${
+              dateTimeOpen
+                ? 'bg-sky-500/15 border-sky-500/50 text-white shadow-[0_0_14px_rgba(14,165,233,0.2)]'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-sky-500/40 text-slate-300'
+            }`}
+            title="Filter desk allocation by exact date and time window"
+          >
+            <span className="material-symbols-outlined text-[17px] text-sky-400 group-hover:scale-105 transition-transform">
+              calendar_month
+            </span>
+            <span className="font-semibold text-slate-200">
+              {formatDisplayDate(selectedDate)}
+            </span>
+            <span className="text-white/20 font-light">•</span>
+            <span className="text-sky-300/90 font-mono text-[11px] font-medium">
+              {startTime} - {endTime}
+            </span>
+            <span className="material-symbols-outlined text-sm text-slate-400 group-hover:text-slate-200 transition-colors">
+              expand_more
+            </span>
+          </button>
+
+          {/* Date & Time Selector Dropdown Modal - Fully Opaque Solid Surface */}
+          {dateTimeOpen && (
+            <div
+              style={{ backgroundColor: '#131826' }}
+              className="absolute left-0 mt-2 w-[340px] bg-[#131826] border border-slate-700/80 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] p-4 z-50 animate-in fade-in zoom-in-95 duration-150"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-400/30 text-sky-400 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[18px]">calendar_clock</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-100 leading-tight">Allocation Schedule</h4>
+                    <p className="text-[10px] text-slate-400">View desk status for chosen window</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDateTimeOpen(false)}
+                  className="w-6 h-6 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  title="Close schedule filter"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* 1. Date Selection */}
+              <div className="mb-3.5">
+                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+                  1. Reservation Date
+                </label>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => onDateChange(todayIso)}
+                    className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
+                      selectedDate === todayIso
+                        ? 'bg-sky-500/20 text-sky-200 border-sky-400/60 font-semibold shadow-sm'
+                        : 'bg-[#1c2233] text-slate-300 hover:text-white border-slate-700/60 hover:bg-[#232b40]'
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDateChange(tomorrowIso)}
+                    className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
+                      selectedDate === tomorrowIso
+                        ? 'bg-sky-500/20 text-sky-200 border-sky-400/60 font-semibold shadow-sm'
+                        : 'bg-[#1c2233] text-slate-300 hover:text-white border-slate-700/60 hover:bg-[#232b40]'
+                    }`}
+                  >
+                    Tomorrow
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => {
+                      if (e.target.value) onDateChange(e.target.value);
+                    }}
+                    className="w-full bg-[#0d111a] border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-sky-400 font-mono cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Shift / Time Slot Selection */}
+              <div className="mb-3.5">
+                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
+                  2. Shift Window
+                </label>
+                <div className="grid grid-cols-2 gap-1.5 mb-2">
+                  {TIME_SLOTS.filter((s) => s.id !== 'custom').map((slot) => {
+                    const isSelected =
+                      selectedTimeSlot === slot.id ||
+                      (startTime === slot.startTime && endTime === slot.endTime);
+                    return (
+                      <button
+                        type="button"
+                        key={slot.id}
+                        onClick={() => onTimeSlotChange(slot.id, slot.startTime, slot.endTime)}
+                        className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-sky-500/20 border-sky-400 text-sky-200 ring-1 ring-sky-400/40 font-medium shadow-sm'
+                            : 'bg-[#1c2233] border-slate-700/60 text-slate-300 hover:text-white hover:bg-[#232b40]'
+                        }`}
+                      >
+                        <p className="text-xs leading-none mb-1.5 text-slate-100 font-semibold">
+                          {slot.shortLabel}
+                        </p>
+                        <p className="text-[10px] font-mono text-sky-400 font-medium leading-none">
+                          {slot.startTime}–{slot.endTime}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Time Range */}
+                <div className="p-2.5 rounded-xl bg-[#0d111a] border border-slate-700/60">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] text-slate-300 font-medium">Custom Hours</span>
+                    <button
+                      type="button"
+                      onClick={() => onTimeSlotChange('custom', startTime, endTime)}
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                        selectedTimeSlot === 'custom'
+                          ? 'bg-sky-400 text-black font-bold'
+                          : 'text-slate-400 hover:text-white bg-white/[0.04]'
+                      }`}
+                    >
+                      {selectedTimeSlot === 'custom' ? 'Active' : 'Set Custom'}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <span className="text-[9px] text-slate-400 block mb-0.5 font-mono">Start</span>
+                      <input
+                        type="time"
+                        value={startTime}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (onCustomTimeChange) onCustomTimeChange(val, endTime);
+                          else onTimeSlotChange('custom', val, endTime);
+                        }}
+                        className="w-full bg-[#1c2233] border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-slate-100 font-mono focus:border-sky-400 focus:outline-none"
+                      />
+                    </div>
+                    <span className="text-slate-500 text-xs mt-3.5">→</span>
+                    <div className="flex-1">
+                      <span className="text-[9px] text-slate-400 block mb-0.5 font-mono">End</span>
+                      <input
+                        type="time"
+                        value={endTime}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (onCustomTimeChange) onCustomTimeChange(startTime, val);
+                          else onTimeSlotChange('custom', startTime, val);
+                        }}
+                        className="w-full bg-[#1c2233] border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-slate-100 font-mono focus:border-sky-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status explanation */}
+              <div className="p-2.5 rounded-xl bg-[#0d111a] border border-slate-700/60 text-[10px] text-slate-400 leading-tight mb-3.5 flex items-start gap-2">
+                <span className="material-symbols-outlined text-sm text-emerald-400 flex-shrink-0 mt-0.5">
+                  sync
+                </span>
+                <span>Desks reflect dynamic availability for this slot. Expired bookings de-allocate automatically.</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDateTimeOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold text-xs shadow-lg shadow-sky-500/25 transition-all cursor-pointer"
+              >
+                Apply Schedule Filter
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================
+          CENTER SECTION: Sleek Omnibar Search
+         ======================================================== */}
+      <div className="flex-1 max-w-xs md:max-w-sm xl:max-w-md mx-2.5 min-w-[140px]">
+        <div className="relative flex items-center h-9 rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.08] focus-within:border-sky-500/50 focus-within:ring-2 focus-within:ring-sky-500/15 transition-all px-3">
+          <span className="material-symbols-outlined text-slate-400 text-[18px] pointer-events-none flex-shrink-0">
+            search
+          </span>
+          <input
+            type="text"
+            placeholder="Search desks, people..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full bg-transparent pl-2.5 pr-2 text-xs text-slate-200 placeholder:text-slate-400 focus:outline-none"
+          />
+          {searchQuery ? (
+            <button
+              onClick={() => onSearchChange('')}
+              className="text-slate-400 hover:text-white text-xs p-0.5 cursor-pointer"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          ) : (
+            <kbd className="hidden md:inline-flex items-center text-[10px] font-mono text-slate-500 bg-white/[0.04] border border-white/[0.08] px-1.5 py-0.5 rounded flex-shrink-0">
+              Ctrl K
+            </kbd>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================
+          RIGHT SECTION: Live Stats + Radar + Landing + Profile
+         ======================================================== */}
+      <div className="flex items-center gap-2 flex-shrink-0" ref={userMenuRef}>
+        {/* Live Occupancy Pill */}
+        <div className="hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-emerald-950/30 border border-emerald-500/25 text-xs text-emerald-300 font-medium whitespace-nowrap shadow-sm">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="font-semibold">{occupancyRate}%</span>
+          <span className="text-emerald-400/60 font-mono text-[11px]">
+            ({bookedSeats}/{totalSeats})
+          </span>
+        </div>
+
+        {/* Manager Live Presence Radar Toggle Button */}
+        <button
+          onClick={() => onTogglePresence(!showPresence)}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm ${
+            showPresence
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.2)]'
+              : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-slate-200'
+          }`}
+          title="Toggle Radar visualization of live desks"
+        >
+          <span className={`material-symbols-outlined text-[17px] ${showPresence ? 'animate-pulse text-emerald-400' : ''}`}>
+            radar
+          </span>
+          <span className="hidden sm:inline">Radar</span>
+        </button>
+
+        {/* Landing Page Shortcut (Sleek Icon Button) */}
+        {onGoToLanding && (
+          <button
+            onClick={onGoToLanding}
+            className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-400 hover:text-sky-300 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+            title="Switch to Landing Page"
+          >
+            <span className="material-symbols-outlined text-[18px]">storefront</span>
+          </button>
+        )}
+
+        {/* User Profile Pill & Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+            className={`inline-flex items-center gap-2 h-9 pl-1 pr-2.5 rounded-xl border transition-all cursor-pointer shadow-sm text-left ${
+              userDropdownOpen
+                ? 'bg-white/[0.1] border-white/[0.2] text-white'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15]'
+            }`}
+          >
+            <div className="relative">
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/20"
+              />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#0B0F17]" />
+            </div>
+
+            <div className="hidden sm:flex flex-col">
+              <span className="text-xs font-semibold text-slate-200 truncate max-w-[85px] leading-tight">
+                {currentUser.name}
+              </span>
+              <span
+                className={`text-[8px] font-mono uppercase font-bold px-1 py-0 rounded border w-fit leading-tight mt-0.5 ${getRoleBadge(
+                  currentUser.role
+                )}`}
+              >
+                {currentUser.role}
+              </span>
+            </div>
+
+            <span className="material-symbols-outlined text-slate-400 text-xs">
+              expand_more
+            </span>
+          </button>
+
+          {/* User Switcher Dropdown */}
+          {userDropdownOpen && (
+            <div
+              style={{ backgroundColor: '#131826' }}
+              className="absolute right-0 mt-2 w-72 bg-[#131826] border border-slate-700/80 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] p-3 z-50 animate-in fade-in zoom-in-95 duration-150"
+            >
+              {/* User Identity Header */}
+              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#0d111a] border border-slate-700/60 mb-2.5">
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-sky-500/30"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-100 truncate">{currentUser.name}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
+                  <span
+                    className={`inline-block text-[8px] font-mono uppercase font-bold px-1.5 py-0.5 rounded border mt-1 ${getRoleBadge(
+                      currentUser.role
+                    )}`}
+                  >
+                    {currentUser.role} • {currentUser.department}
+                  </span>
+                </div>
+              </div>
+
+              {/* Role Switcher */}
+              <div className="px-2 py-1 mb-1">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase font-mono tracking-wider">
+                  Switch Active Profile
+                </p>
+              </div>
+
+              <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                {allUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => {
+                      onSwitchUser(user);
+                      setUserDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
+                      currentUser.id === user.id
+                        ? 'bg-sky-500/15 border border-sky-500/30'
+                        : 'hover:bg-white/[0.05] border border-transparent'
+                    }`}
+                  >
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-200 truncate">
+                        {user.name}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        {user.department}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[8px] font-mono uppercase font-bold px-1 py-0.5 rounded border ${getRoleBadge(
+                        user.role
+                      )}`}
+                    >
+                      {user.role}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Actions Footer */}
+              <div className="pt-2.5 mt-2 border-t border-white/[0.08] space-y-1">
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    onOpenRegister();
+                  }}
+                  className="w-full py-1.5 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">person_add</span>
+                  <span>Create New Account</span>
+                </button>
+
+                {onGoToLanding && (
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      onGoToLanding();
+                    }}
+                    className="w-full py-1.5 px-3 rounded-xl hover:bg-white/[0.06] text-slate-400 hover:text-white text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">storefront</span>
+                    <span>Landing Page</span>
+                  </button>
+                )}
+
+                {onLogout && (
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full py-1.5 px-3 rounded-xl hover:bg-rose-500/15 text-rose-400 text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">logout</span>
+                    <span>Sign Out</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};
