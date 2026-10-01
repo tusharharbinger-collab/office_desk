@@ -1,5 +1,6 @@
 import React from 'react';
 import { Desk } from '../types';
+import { Avatar } from './Avatar';
 
 interface SeatTooltipProps {
   desk: Desk | null;
@@ -72,10 +73,11 @@ export const SeatTooltip: React.FC<SeatTooltipProps> = ({ desk, position }) => {
         {desk.occupant && (
           <div className="mt-2.5 pt-2 border-t border-outline-variant/30 bg-surface-container/60 -mx-3.5 -mb-3.5 p-3 rounded-b-2xl">
             <div className="flex items-center gap-2">
-              <img
+              <Avatar
                 src={desk.occupant.avatar}
-                alt={desk.occupant.name}
-                className="w-7 h-7 rounded-full border border-primary object-cover"
+                name={desk.occupant.name}
+                size="sm"
+                rounded="rounded-full"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-on-surface truncate">

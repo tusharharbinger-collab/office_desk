@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Desk, UserProfile } from '../types';
+import { Avatar } from './Avatar';
 
 interface ManagerAnalyticsModalProps {
   isOpen: boolean;
@@ -213,10 +214,11 @@ export const ManagerAnalyticsModal: React.FC<ManagerAnalyticsModalProps> = ({
                     className="grid grid-cols-12 items-center bg-surface-container-high/40 hover:bg-surface-container-high p-3.5 rounded-2xl border border-outline-variant/30 transition-all text-xs"
                   >
                     <div className="col-span-4 flex items-center gap-3">
-                      <img
+                      <Avatar
                         src={occ.avatar}
-                        alt={occ.name}
-                        className="w-9 h-9 rounded-full object-cover border border-secondary/40 shadow-sm"
+                        name={occ.name}
+                        size="md"
+                        rounded="rounded-full"
                       />
                       <div>
                         <p className="font-semibold text-on-surface">{occ.name}</p>
@@ -364,10 +366,11 @@ export const ManagerAnalyticsModal: React.FC<ManagerAnalyticsModalProps> = ({
                       className="grid grid-cols-12 items-center bg-surface-container-high/40 hover:bg-surface-container-high p-3.5 rounded-2xl border border-outline-variant/30 transition-all text-xs"
                     >
                       <div className="col-span-4 flex items-center gap-3">
-                        <img
+                        <Avatar
                           src={emp.avatar}
-                          alt={emp.name}
-                          className="w-9 h-9 rounded-full object-cover border border-outline-variant/40 shadow-sm"
+                          name={emp.name}
+                          size="md"
+                          rounded="rounded-full"
                         />
                         <div>
                           <p className="font-semibold text-on-surface">{emp.name}</p>

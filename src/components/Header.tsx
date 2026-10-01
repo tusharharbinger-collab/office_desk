@@ -6,6 +6,7 @@ import {
   formatDisplayDate,
   TIME_SLOTS
 } from '../utils/dateTime';
+import { Avatar } from './Avatar';
 
 interface HeaderProps {
   activeArea: 'area-1' | 'area-2';
@@ -72,6 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [dateTimeOpen, setDateTimeOpen] = useState(false);
   const dateTimeRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -91,6 +93,18 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, [dateTimeOpen, userDropdownOpen]);
 
+  // Global Ctrl+K / Cmd+K search shortcut focus
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const getRoleBadge = (role: Role) => {
     switch (role) {
       case 'admin':
@@ -107,18 +121,18 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`fixed top-0 right-0 h-14 z-40 bg-[#0B0F17]/90 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.5)] flex items-center justify-between px-2 sm:px-4 md:px-5 transition-all duration-200 select-none ${
+      className={`fixed top-0 right-0 h-14 z-40 bg-[#090D16]/90 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.6)] flex items-center justify-between px-2.5 sm:px-4 md:px-5 transition-all duration-200 select-none ${
         isSidebarCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-60'
       }`}
     >
       {/* ========================================================
-          LEFT SECTION: Sidebar Toggle + Segmented Area + Date/Time
+          LEFT ZONE: Sidebar Toggle + Segmented Area Switcher
          ======================================================== */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
         {/* Toggle Sidebar Button */}
         <button
           onClick={onToggleSidebar}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm flex-shrink-0"
+          className="w-9 h-9 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.18] text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm flex-shrink-0"
           title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           <span className="material-symbols-outlined text-[20px]">
@@ -127,21 +141,21 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Segmented Area Switcher (Apple/Linear Style) */}
-        <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9">
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9 shadow-inner">
           <button
             onClick={() => onAreaChange('area-1')}
-            className={`px-2 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
+            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
               activeArea === 'area-1'
-                ? 'bg-sky-500/15 text-sky-300 font-semibold border border-sky-400/30 shadow-[0_0_12px_rgba(14,165,233,0.15)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium'
+                ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
             }`}
           >
             <span>Area 1</span>
             <span
-              className={`text-[10px] font-mono px-1 py-0.2 rounded ${
+              className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
                 activeArea === 'area-1'
-                  ? 'bg-sky-400/20 text-sky-200 font-bold'
-                  : 'text-slate-500'
+                  ? 'bg-sky-400/25 text-sky-200 font-bold'
+                  : 'text-slate-500 bg-white/[0.04]'
               }`}
             >
               130
@@ -150,59 +164,96 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => onAreaChange('area-2')}
-            className={`px-2 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
+            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
               activeArea === 'area-2'
-                ? 'bg-sky-500/15 text-sky-300 font-semibold border border-sky-400/30 shadow-[0_0_12px_rgba(14,165,233,0.15)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium'
+                ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
             }`}
           >
             <span>Area 2</span>
             <span
-              className={`text-[10px] font-mono px-1 py-0.2 rounded ${
+              className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
                 activeArea === 'area-2'
-                  ? 'bg-sky-400/20 text-sky-200 font-bold'
-                  : 'text-slate-500'
+                  ? 'bg-sky-400/25 text-sky-200 font-bold'
+                  : 'text-slate-500 bg-white/[0.04]'
               }`}
             >
               80
             </span>
           </button>
         </div>
+      </div>
 
+      {/* ========================================================
+          CENTER ZONE: Omnibar Search (Centered, Non-squished)
+         ======================================================== */}
+      <div className="hidden md:flex items-center justify-center flex-1 min-w-0 px-2 lg:px-4">
+        <div className="relative flex items-center h-9 w-full max-w-xs lg:max-w-sm xl:max-w-md rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.08] focus-within:border-sky-500/50 focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:bg-[#0c101a] transition-all px-3 shadow-inner">
+          <span className="material-symbols-outlined text-slate-400 text-[18px] pointer-events-none flex-shrink-0">
+            search
+          </span>
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search desks, people, zones..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full bg-transparent pl-2.5 pr-2 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none min-w-0"
+          />
+          {searchQuery ? (
+            <button
+              onClick={() => onSearchChange('')}
+              className="w-5 h-5 rounded-md bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          ) : (
+            <kbd className="hidden lg:inline-flex items-center text-[10px] font-mono text-slate-400 bg-white/[0.06] border border-white/[0.1] px-1.5 py-0.5 rounded shadow-inner flex-shrink-0">
+              Ctrl K
+            </kbd>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================
+          RIGHT ZONE: Schedule + Live Stats + Radar + Store + Profile
+         ======================================================== */}
+      <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 flex-shrink-0" ref={userMenuRef}>
         {/* Interactive Date & Shift Selector Capsule */}
         <div className="relative" ref={dateTimeRef}>
           <button
             onClick={() => setDateTimeOpen(!dateTimeOpen)}
-            className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm group ${
+            className={`inline-flex items-center gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm group ${
               dateTimeOpen
                 ? 'bg-sky-500/15 border-sky-500/50 text-white shadow-[0_0_14px_rgba(14,165,233,0.2)]'
-                : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-sky-500/40 text-slate-300'
+                : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] hover:border-sky-500/40 text-slate-300'
             }`}
             title="Filter desk allocation by exact date and time window"
           >
-            <span className="material-symbols-outlined text-[17px] text-sky-400 group-hover:scale-105 transition-transform flex-shrink-0">
+            <span className="material-symbols-outlined text-[17px] text-sky-400 group-hover:scale-110 transition-transform flex-shrink-0">
               calendar_month
             </span>
-            <span className="font-semibold text-slate-200 hidden md:inline">
+            <span className="font-semibold text-slate-200 hidden xl:inline">
               {formatDisplayDate(selectedDate)}
             </span>
-            <span className="font-semibold text-slate-200 md:hidden">
+            <span className="font-semibold text-slate-200 xl:hidden">
               {formatDisplayDate(selectedDate).split(',')[0]}
             </span>
             <span className="text-white/20 font-light hidden sm:inline">•</span>
             <span className="text-sky-300/90 font-mono text-[11px] font-medium hidden sm:inline">
-              {startTime} - {endTime}
+              {startTime}–{endTime}
             </span>
             <span className="material-symbols-outlined text-sm text-slate-400 group-hover:text-slate-200 transition-colors flex-shrink-0">
               expand_more
             </span>
           </button>
 
-          {/* Date & Time Selector Dropdown Modal - Fully Opaque Solid Surface */}
+          {/* Date & Time Selector Dropdown Modal */}
           {dateTimeOpen && (
             <div
               style={{ backgroundColor: '#131826' }}
-              className="absolute left-0 mt-2 w-[340px] bg-[#131826] border border-slate-700/80 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] p-4 z-50 animate-in fade-in zoom-in-95 duration-150"
+              className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-[340px] bg-[#131826] border border-slate-700/80 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] p-4 z-50 animate-in fade-in zoom-in-95 duration-150"
             >
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-3.5">
@@ -364,51 +415,18 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
         </div>
-      </div>
 
-      {/* ========================================================
-          CENTER SECTION: Sleek Omnibar Search
-         ======================================================== */}
-      <div className="hidden sm:block flex-1 max-w-xs md:max-w-sm xl:max-w-md mx-2 min-w-0">
-        <div className="relative flex items-center h-9 rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.08] focus-within:border-sky-500/50 focus-within:ring-2 focus-within:ring-sky-500/15 transition-all px-3">
-          <span className="material-symbols-outlined text-slate-400 text-[18px] pointer-events-none flex-shrink-0">
-            search
-          </span>
-          <input
-            type="text"
-            placeholder="Search desks, people..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-transparent pl-2.5 pr-2 text-xs text-slate-200 placeholder:text-slate-400 focus:outline-none"
-          />
-          {searchQuery ? (
-            <button
-              onClick={() => onSearchChange('')}
-              className="text-slate-400 hover:text-white text-xs p-0.5 cursor-pointer"
-              title="Clear search"
-            >
-              ✕
-            </button>
-          ) : (
-            <kbd className="hidden md:inline-flex items-center text-[10px] font-mono text-slate-500 bg-white/[0.04] border border-white/[0.08] px-1.5 py-0.5 rounded flex-shrink-0">
-              Ctrl K
-            </kbd>
-          )}
-        </div>
-      </div>
-
-      {/* ========================================================
-          RIGHT SECTION: Live Stats + Radar + Landing + Profile
-         ======================================================== */}
-      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" ref={userMenuRef}>
         {/* Live Occupancy Pill */}
-        <div className="hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-emerald-950/30 border border-emerald-500/25 text-xs text-emerald-300 font-medium whitespace-nowrap shadow-sm">
-          <span className="relative flex h-2 w-2">
+        <div
+          className="hidden md:inline-flex items-center gap-2 h-9 px-2.5 sm:px-3 rounded-xl bg-emerald-950/30 border border-emerald-500/25 text-xs text-emerald-300 font-medium whitespace-nowrap shadow-sm"
+          title={`${bookedSeats} of ${totalSeats} desks reserved (${occupancyRate}% occupancy)`}
+        >
+          <span className="relative flex h-2 w-2 flex-shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="font-semibold">{occupancyRate}%</span>
-          <span className="text-emerald-400/60 font-mono text-[11px]">
+          <span className="text-emerald-400/60 font-mono text-[11px] hidden xl:inline">
             ({bookedSeats}/{totalSeats})
           </span>
         </div>
@@ -419,48 +437,51 @@ export const Header: React.FC<HeaderProps> = ({
           className={`inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm ${
             showPresence
               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.2)]'
-              : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-slate-200'
+              : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white'
           }`}
           title="Toggle Radar visualization of live desks"
         >
-          <span className={`material-symbols-outlined text-[17px] ${showPresence ? 'animate-pulse text-emerald-400' : ''}`}>
+          <span className={`material-symbols-outlined text-[17px] ${showPresence ? 'animate-pulse text-emerald-400' : 'text-slate-400'}`}>
             radar
           </span>
-          <span className="hidden md:inline">Radar</span>
+          <span className="hidden xl:inline">Radar</span>
         </button>
 
         {/* Landing Page Shortcut (Sleek Icon Button) */}
         {onGoToLanding && (
           <button
             onClick={onGoToLanding}
-            className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-400 hover:text-sky-300 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+            className="w-9 h-9 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-400 hover:text-sky-300 flex items-center justify-center transition-all cursor-pointer shadow-sm flex-shrink-0"
             title="Switch to Landing Page"
           >
             <span className="material-symbols-outlined text-[18px]">storefront</span>
           </button>
         )}
 
+        {/* Subtle Vertical Divider */}
+        <div className="h-5 w-px bg-white/[0.08] hidden sm:block flex-shrink-0" />
+
         {/* User Profile Pill & Dropdown */}
         <div className="relative">
           <button
             onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className={`inline-flex items-center gap-2 h-9 pl-1 pr-2.5 rounded-xl border transition-all cursor-pointer shadow-sm text-left ${
+            className={`inline-flex items-center gap-2 h-9 pl-1 pr-2 sm:pr-2.5 rounded-xl border transition-all cursor-pointer shadow-sm text-left group ${
               userDropdownOpen
-                ? 'bg-white/[0.1] border-white/[0.2] text-white'
-                : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15]'
+                ? 'bg-white/[0.1] border-white/[0.2] text-white shadow-[0_0_15px_rgba(255,255,255,0.06)]'
+                : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.16]'
             }`}
           >
-            <div className="relative">
-              <img
-                src={currentUser.avatar}
-                alt={currentUser.name}
-                className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/20"
-              />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#0B0F17]" />
-            </div>
+            <Avatar
+              src={currentUser.avatar}
+              name={currentUser.name}
+              size="sm"
+              showStatus={true}
+              status="online"
+              rounded="rounded-lg"
+            />
 
             <div className="hidden sm:flex flex-col">
-              <span className="text-xs font-semibold text-slate-200 truncate max-w-[85px] leading-tight">
+              <span className="text-xs font-semibold text-slate-200 truncate max-w-[85px] lg:max-w-[105px] leading-tight group-hover:text-white">
                 {currentUser.name}
               </span>
               <span
@@ -472,7 +493,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
 
-            <span className="material-symbols-outlined text-slate-400 text-xs">
+            <span className="material-symbols-outlined text-slate-400 text-xs group-hover:text-slate-200 transition-colors">
               expand_more
             </span>
           </button>
@@ -485,10 +506,11 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {/* User Identity Header */}
               <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#0d111a] border border-slate-700/60 mb-2.5">
-                <img
+                <Avatar
                   src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-sky-500/30"
+                  name={currentUser.name}
+                  size="lg"
+                  rounded="rounded-xl"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-100 truncate">{currentUser.name}</p>
@@ -524,10 +546,11 @@ export const Header: React.FC<HeaderProps> = ({
                         : 'hover:bg-white/[0.05] border border-transparent'
                     }`}
                   >
-                    <img
+                    <Avatar
                       src={user.avatar}
-                      alt={user.name}
-                      className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10"
+                      name={user.name}
+                      size="sm"
+                      rounded="rounded-lg"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-slate-200 truncate">

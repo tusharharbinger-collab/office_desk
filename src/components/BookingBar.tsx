@@ -1,6 +1,7 @@
 import React from 'react';
 import { Desk, UserProfile, Booking } from '../types';
 import { formatDisplayDate } from '../utils/dateTime';
+import { Avatar } from './Avatar';
 
 interface BookingBarProps {
   selectedDesk: Desk | null;
@@ -176,10 +177,11 @@ export const BookingBar: React.FC<BookingBarProps> = ({
             {/* Selected Employee Preview Chip */}
             {selectedTargetUser && (
               <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-surface-container border border-outline-variant/30 animate-in fade-in duration-100">
-                <img
+                <Avatar
                   src={selectedTargetUser.avatar}
-                  alt={selectedTargetUser.name}
-                  className="w-6 h-6 rounded-full object-cover border border-secondary"
+                  name={selectedTargetUser.name}
+                  size="xs"
+                  rounded="rounded-full"
                 />
                 <div className="flex flex-col">
                   <span className="text-[11px] font-semibold text-on-surface leading-tight truncate max-w-[100px]">
@@ -195,10 +197,11 @@ export const BookingBar: React.FC<BookingBarProps> = ({
         ) : (
           /* Regular User: Books for self */
           <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-surface-container border border-outline-variant/30">
-            <img
+            <Avatar
               src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-6 h-6 rounded-full object-cover border border-primary/50"
+              name={currentUser.name}
+              size="xs"
+              rounded="rounded-full"
             />
             <div className="flex flex-col">
               <span className="text-[11px] font-semibold text-on-surface leading-tight">

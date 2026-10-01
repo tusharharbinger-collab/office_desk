@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile, Role } from '../types';
+import { Avatar } from './Avatar';
 
 interface AdminUsersModalProps {
   isOpen: boolean;
@@ -34,12 +35,24 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
     e.preventDefault();
     if (!newName.trim() || !newEmail.trim()) return;
 
+    const AVATAR_POOL = [
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80',
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80',
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80',
+      'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&h=120&q=80',
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80'
+    ];
+    const pickedAvatar = AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)];
+
     onAddUser({
       name: newName,
       email: newEmail,
       role: newRole,
       department: newDept,
-      avatar: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 100000)}?auto=format&fit=crop&w=120&h=120&q=80`,
+      avatar: pickedAvatar,
       active: true
     });
 
@@ -170,10 +183,11 @@ export const AdminUsersModal: React.FC<AdminUsersModalProps> = ({
                   className="grid grid-cols-12 items-center px-5 py-3 hover:bg-surface-container-high/50 transition-all text-xs"
                 >
                   <div className="col-span-3 flex items-center gap-3">
-                    <img
+                    <Avatar
                       src={u.avatar}
-                      alt={u.name}
-                      className="w-8 h-8 rounded-full object-cover border border-outline-variant/40"
+                      name={u.name}
+                      size="md"
+                      rounded="rounded-full"
                     />
                     <div>
                       <p className="font-semibold text-on-surface">{u.name}</p>

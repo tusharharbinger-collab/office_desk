@@ -33,6 +33,7 @@ import { RegisterModal } from './components/RegisterModal';
 import { TimeGridModal } from './components/TimeGridModal';
 import { RoomBookingModal } from './components/RoomBookingModal';
 import { MicrosoftSSOModal } from './components/MicrosoftSSOModal';
+import { Avatar } from './components/Avatar';
 import { getTodayISODate } from './utils/dateTime';
 
 export const App: React.FC = () => {
@@ -706,10 +707,11 @@ export const App: React.FC = () => {
             >
               <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse flex-shrink-0" />
               <span className="text-slate-400 text-[11px]">Allocating for:</span>
-              <img
+              <Avatar
                 src={selectedTargetUser.avatar}
-                alt={selectedTargetUser.name}
-                className="w-5 h-5 rounded-full object-cover ring-1 ring-emerald-400/50"
+                name={selectedTargetUser.name}
+                size="xs"
+                rounded="rounded-full"
               />
               <span className="font-semibold text-slate-100">{selectedTargetUser.name}</span>
               <span className="text-[10px] text-emerald-400 font-mono">({selectedTargetUser.department})</span>
