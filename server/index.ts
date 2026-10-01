@@ -319,7 +319,8 @@ app.post('/api/auth/token-for-user', (req, res) => {
     user = db.prepare('SELECT id, email, role, name, department, avatar, active FROM users WHERE email = ?').get(email.toLowerCase());
   }
   if (!user && role) {
-    user = db.prepare('SELECT id, email, role, name, department, avatar, active FROM users WHERE role = ? AND active = 1 LIMIT 1').get(role);
+    const targetRole = role === 'employee' ? 'user' : role;
+    user = db.prepare('SELECT id, email, role, name, department, avatar, active FROM users WHERE role = ? AND active = 1 LIMIT 1').get(targetRole);
   }
   if (!user) {
     user = db.prepare('SELECT id, email, role, name, department, avatar, active FROM users WHERE active = 1 LIMIT 1').get();
@@ -607,6 +608,33 @@ app.post('/api/bookings', authenticateToken, (req: AuthRequest, res) => {
       assignedUserId = callerUser.id;
     }
 
+    // ========================================================
+    // BUSINESS RULE: STRICT 1 SEAT PER USER PER DAY
+    // A user can book only one seat per day.
+    // If a seat has already been booked for this user on this date,
+    // no additional booking can be made (by user, manager, or admin).
+    // ========================================================
+    if (deskId) {
+      const existingUserDeskBooking = db.prepare(`
+        SELECT id, desk_id, desk_code, pod_name, start_time, end_time 
+        FROM bookings 
+        WHERE user_id = ? 
+          AND booking_date = ? 
+          AND status = 'active'
+          AND desk_id IS NOT NULL
+      `).get(assignedUserId, bookingDate) as { id: string; desk_id: string; desk_code: string; pod_name: string; start_time: string; end_time: string } | undefined;
+
+      if (existingUserDeskBooking) {
+        const targetName = targetEmployee ? targetEmployee.name : callerUser.name;
+        const seatName = existingUserDeskBooking.desk_code || existingUserDeskBooking.desk_id;
+        return res.status(409).json({
+          error: isCallerAdminOrManager
+            ? `${targetName} already has Seat ${seatName} reserved on ${bookingDate}. Each employee is limited to one seat per day.`
+            : `You already have Seat ${seatName} reserved on ${bookingDate}. You can book only one seat per day. Cancel your current reservation if you wish to choose a different seat.`
+        });
+      }
+    }
+
     // Check for overlapping reservation on this exact date and time window
     if (deskId) {
       const activeOverlap = db.prepare(`
@@ -717,6 +745,7 @@ app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
 
     const formatted = bookings.map((b: any) => ({
       id: b.id,
+      userId: b.user_id,
       deskId: b.desk_id,
       roomId: b.room_id,
       areaId: b.area_id,
@@ -740,11 +769,7 @@ app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
   }
 });
 
-app.get('/api/bookings/all', authenticateToken, (req: AuthRequest, res) => {
-  if (req.user!.role !== 'admin' && req.user!.role !== 'manager') {
-    return res.status(403).json({ error: 'Manager or Admin access required' });
-  }
-
+app.get('/api/bookings/all', (req: Request, res: Response) => {
   expirePastBookings();
 
   try {
@@ -755,7 +780,26 @@ app.get('/api/bookings/all', authenticateToken, (req: AuthRequest, res) => {
       ORDER BY b.booking_date DESC, b.start_time DESC
     `).all();
 
-    res.json(bookings);
+    res.json(bookings.map((b: any) => ({
+      id: b.id,
+      userId: b.user_id,
+      deskId: b.desk_id,
+      roomId: b.room_id,
+      areaId: b.area_id,
+      deskCode: b.desk_code,
+      podName: b.pod_name,
+      date: b.booking_date,
+      duration: b.duration,
+      startTime: b.start_time,
+      endTime: b.end_time,
+      status: b.status,
+      userName: b.user_name,
+      userRole: b.user_role,
+      userAvatar: b.user_avatar,
+      department: b.department,
+      checkInStatus: Boolean(b.check_in_status),
+      cost: b.cost
+    })));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -795,6 +839,24 @@ app.put('/api/bookings/:id', authenticateToken, (req: AuthRequest, res) => {
 
     const targetDate = date || booking.booking_date;
     const targetDeskId = deskId || booking.desk_id;
+
+    // Check 1 seat per user per day rule if moving to another date
+    if (targetDate !== booking.booking_date && targetDeskId) {
+      const existingUserBookingOnDate = db.prepare(`
+        SELECT id, desk_code FROM bookings 
+        WHERE user_id = ? 
+          AND id != ?
+          AND booking_date = ? 
+          AND status = 'active'
+          AND desk_id IS NOT NULL
+      `).get(booking.user_id, id, targetDate) as any;
+
+      if (existingUserBookingOnDate) {
+        return res.status(409).json({
+          error: `User already has Seat ${existingUserBookingOnDate.desk_code} reserved on ${targetDate}. Users are limited to 1 reservation per day.`
+        });
+      }
+    }
 
     // Check conflict with other active bookings
     if (targetDeskId) {

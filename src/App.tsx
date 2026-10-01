@@ -78,6 +78,7 @@ export const App: React.FC = () => {
 
   // Bookings list
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
 
   // System Health
   const [systemHealth, setSystemHealth] = useState<SystemHealthMetric>(INITIAL_SYSTEM_HEALTH);
@@ -170,6 +171,9 @@ export const App: React.FC = () => {
         if (rooms1 && rooms1.length > 0) setArea1Rooms(rooms1);
         if (rooms2 && rooms2.length > 0) setArea2Rooms(rooms2);
 
+        const all = await api.getAllBookings().catch(() => []);
+        if (all) setAllBookings(all);
+
         if (me) {
           const myBookings = await api.getMyBookings().catch(() => []);
           setBookings(myBookings);
@@ -182,19 +186,33 @@ export const App: React.FC = () => {
     loadData();
   }, [isAuthenticated]);
 
+  // Refresh both allBookings (for seat rules) and user's myBookings
+  const refreshBookingsData = async () => {
+    try {
+      const all = await api.getAllBookings().catch(() => []);
+      if (all) setAllBookings(all);
+      const my = await api.getMyBookings().catch(() => []);
+      if (my) setBookings(my);
+    } catch {
+      // fallback
+    }
+  };
+
   // Refresh active desks and rooms with date/time slot filtering
   const refreshDesks = async (date = selectedDate, start = startTime, end = endTime) => {
     try {
-      const [desks1, desks2, rooms1, rooms2] = await Promise.all([
+      const [desks1, desks2, rooms1, rooms2, all] = await Promise.all([
         api.getDesks('area-1', date, start, end).catch(() => null),
         api.getDesks('area-2', date, start, end).catch(() => null),
         api.getRooms('area-1', date, start, end).catch(() => null),
-        api.getRooms('area-2', date, start, end).catch(() => null)
+        api.getRooms('area-2', date, start, end).catch(() => null),
+        api.getAllBookings().catch(() => null)
       ]);
       if (desks1) setArea1Desks(desks1);
       if (desks2) setArea2Desks(desks2);
       if (rooms1) setArea1Rooms(rooms1);
       if (rooms2) setArea2Rooms(rooms2);
+      if (all) setAllBookings(all);
     } catch {
       // fallback
     }
@@ -247,6 +265,8 @@ export const App: React.FC = () => {
     }
     setIsAuthenticated(true);
     showToast(`Welcome! Logged in as ${user.name} (${user.role.toUpperCase()})`);
+    refreshBookingsData();
+    refreshDesks();
   };
 
   // Auth Success Handlers
@@ -259,7 +279,7 @@ export const App: React.FC = () => {
     }
     setIsAuthenticated(true);
     showToast(`Welcome back, ${user.name}!`);
-    api.getMyBookings().then(setBookings).catch(() => {});
+    refreshBookingsData();
     refreshDesks();
   };
 
@@ -295,6 +315,27 @@ export const App: React.FC = () => {
       return;
     }
 
+    // Business Rule Check: strictly 1 seat per user per day
+    const effectiveUserId = targetEmployee?.id || currentUser.id;
+    const effectiveUserName = targetEmployee?.name || currentUser.name;
+    const existingDayBooking = allBookings.find(
+      (b) =>
+        (b.userId === effectiveUserId || b.userName === effectiveUserName) &&
+        b.date === selectedDate &&
+        b.status === 'active' &&
+        Boolean(b.deskId)
+    );
+
+    if (existingDayBooking) {
+      const seatLabel = existingDayBooking.deskCode || existingDayBooking.deskId;
+      if (isAdminOrManager) {
+        showToast(`Rule Violation: ${effectiveUserName} already has Seat ${seatLabel} reserved on ${selectedDate}. Limit: 1 seat per user per day.`);
+      } else {
+        showToast(`Rule Violation: You already have Seat ${seatLabel} reserved on ${selectedDate}. Limit: 1 seat per user per day.`);
+      }
+      return;
+    }
+
     try {
       const newBooking = await api.createBooking({
         deskId: selectedDesk.id,
@@ -309,6 +350,7 @@ export const App: React.FC = () => {
       });
 
       setBookings((prev) => [newBooking, ...prev]);
+      setAllBookings((prev) => [newBooking, ...prev]);
 
       const effectiveUser = targetEmployee || currentUser;
       const updateDesk = (desksList: Desk[]) =>
@@ -335,6 +377,7 @@ export const App: React.FC = () => {
       setSelectedDesk(null);
       if (isAdminOrManager) setSelectedTargetUser(null);
       refreshDesks(selectedDate, startTime, endTime);
+      refreshBookingsData();
       showToast(
         isAdminOrManager
           ? `🎉 Seat ${newBooking.deskId} successfully allocated to ${effectiveUser.name}!`
@@ -347,14 +390,16 @@ export const App: React.FC = () => {
 
   // Cancel Booking (Immediately de-allocates the seat in SQLite)
   const handleCancelBooking = async (bookingId: string) => {
-    const booking = bookings.find((b) => b.id === bookingId);
+    const booking = bookings.find((b) => b.id === bookingId) || allBookings.find((b) => b.id === bookingId);
     if (!booking) return;
 
     try {
       await api.cancelBooking(bookingId);
       setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+      setAllBookings((prev) => prev.filter((b) => b.id !== bookingId));
 
       refreshDesks(selectedDate, startTime, endTime);
+      refreshBookingsData();
       showToast(`Reservation for seat ${booking.deskId} has been cancelled and seat is now free.`);
     } catch (err: any) {
       showToast(err.message || 'Failed to cancel');
@@ -388,8 +433,12 @@ export const App: React.FC = () => {
       setBookings((prev) =>
         prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
       );
+      setAllBookings((prev) =>
+        prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
+      );
 
       refreshDesks(selectedDate, startTime, endTime);
+      refreshBookingsData();
       showToast(`Booking updated: ${updatedBooking.deskId} on ${updatedBooking.date} (${updatedBooking.startTime}-${updatedBooking.endTime}).`);
     } catch (err: any) {
       showToast(err.message || 'Failed to update');
@@ -696,6 +745,7 @@ export const App: React.FC = () => {
             users={users}
             selectedTargetUser={selectedTargetUser}
             onSelectTargetUser={setSelectedTargetUser}
+            bookings={allBookings}
           />
         </main>
       </div>

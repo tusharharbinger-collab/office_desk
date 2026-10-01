@@ -41,6 +41,7 @@ export interface Room {
 
 export interface Booking {
   id: string;
+  userId?: string;
   deskId: string;
   areaId: 'area-1' | 'area-2';
   deskCode: string;

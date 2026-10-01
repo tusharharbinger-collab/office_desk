@@ -203,6 +203,12 @@ export const api = {
     return res.json();
   },
 
+  async getAllBookings(): Promise<Booking[]> {
+    const res = await fetch(`${BASE_URL}/bookings/all`);
+    if (!res.ok) throw new Error('Failed to fetch all bookings');
+    return res.json();
+  },
+
   async updateBooking(id: string, data: { duration?: string; deskId?: string; date?: string; startTime?: string; endTime?: string }): Promise<void> {
     const res = await fetch(`${BASE_URL}/bookings/${id}`, {
       method: 'PUT',

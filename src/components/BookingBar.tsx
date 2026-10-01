@@ -1,5 +1,5 @@
 import React from 'react';
-import { Desk, UserProfile } from '../types';
+import { Desk, UserProfile, Booking } from '../types';
 import { formatDisplayDate } from '../utils/dateTime';
 
 interface BookingBarProps {
@@ -16,6 +16,7 @@ interface BookingBarProps {
   users: UserProfile[];
   selectedTargetUser: UserProfile | null;
   onSelectTargetUser: (user: UserProfile) => void;
+  bookings?: Booking[];
 }
 
 export const BookingBar: React.FC<BookingBarProps> = ({
@@ -31,7 +32,8 @@ export const BookingBar: React.FC<BookingBarProps> = ({
   currentUser,
   users,
   selectedTargetUser,
-  onSelectTargetUser
+  onSelectTargetUser,
+  bookings = []
 }) => {
   // When no seat is selected, do not render anything to keep canvas spacious
   if (!selectedDesk) return null;
@@ -40,12 +42,35 @@ export const BookingBar: React.FC<BookingBarProps> = ({
   // Admin & Manager cannot book for themselves - filter to active employee accounts only
   const eligibleEmployees = users.filter((u) => u.role === 'user' && u.active);
 
-  // Auto-select first eligible employee if none selected when admin/manager opens booking
+  // Business Rule: Check if a user already has an active desk booking on this selected date
+  const getEmployeeBookingForDate = (userId: string, userName: string) => {
+    return bookings.find(
+      (b) =>
+        (b.userId === userId || b.userName === userName) &&
+        b.date === selectedDate &&
+        b.status === 'active' &&
+        Boolean(b.deskId)
+    );
+  };
+
+  const currentUserExistingBooking = !isAdminOrManager
+    ? getEmployeeBookingForDate(currentUser.id, currentUser.name)
+    : null;
+
+  const targetUserExistingBooking = isAdminOrManager && selectedTargetUser
+    ? getEmployeeBookingForDate(selectedTargetUser.id, selectedTargetUser.name)
+    : null;
+
+  const isBookingBlocked = Boolean(currentUserExistingBooking || targetUserExistingBooking);
+
+  // Auto-select first available eligible employee if none selected when admin/manager opens booking
   React.useEffect(() => {
     if (isAdminOrManager && !selectedTargetUser && eligibleEmployees.length > 0) {
-      onSelectTargetUser(eligibleEmployees[0]);
+      // Prefer employee who does not already have a booking today
+      const availableEmp = eligibleEmployees.find((e) => !getEmployeeBookingForDate(e.id, e.name)) || eligibleEmployees[0];
+      onSelectTargetUser(availableEmp);
     }
-  }, [isAdminOrManager, selectedTargetUser, eligibleEmployees, onSelectTargetUser]);
+  }, [isAdminOrManager, selectedTargetUser, eligibleEmployees, onSelectTargetUser, selectedDate]);
 
   const handleDurationSelect = (val: string) => {
     onDurationChange(val);
@@ -99,6 +124,20 @@ export const BookingBar: React.FC<BookingBarProps> = ({
         </div>
       </div>
 
+      {/* Warning Banner if 1-Seat-Per-Day rule is violated */}
+      {isBookingBlocked && (
+        <div className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium animate-in fade-in duration-200">
+          <span className="material-symbols-outlined text-base text-amber-400 flex-shrink-0">
+            warning
+          </span>
+          <span className="flex-1 text-[11px] sm:text-xs">
+            {currentUserExistingBooking
+              ? `You already have Seat ${currentUserExistingBooking.deskCode || currentUserExistingBooking.deskId} reserved on ${formatDisplayDate(selectedDate)}. Booking Rule: Max 1 seat per person per day.`
+              : `${selectedTargetUser?.name} already has Seat ${targetUserExistingBooking?.deskCode || targetUserExistingBooking?.deskId} reserved on ${formatDisplayDate(selectedDate)}. Booking Rule: Max 1 seat per person per day.`}
+          </span>
+        </div>
+      )}
+
       {/* Target User & Duration Selection */}
       <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
         {/* If Admin or Manager: Employee Assignment Dropdown (Cannot book for themselves) */}
@@ -115,14 +154,22 @@ export const BookingBar: React.FC<BookingBarProps> = ({
                   const emp = eligibleEmployees.find((u) => u.id === e.target.value);
                   if (emp) onSelectTargetUser(emp);
                 }}
-                className="bg-surface-container border border-outline-variant/40 rounded-lg px-2.5 py-1 text-xs text-on-surface focus:outline-none focus:border-secondary cursor-pointer font-medium max-w-[190px]"
+                className="bg-surface-container border border-outline-variant/40 rounded-lg px-2.5 py-1 text-xs text-on-surface focus:outline-none focus:border-secondary cursor-pointer font-medium max-w-[210px]"
               >
                 <option value="" disabled>Choose Employee...</option>
-                {eligibleEmployees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.department})
-                  </option>
-                ))}
+                {eligibleEmployees.map((emp) => {
+                  const booked = getEmployeeBookingForDate(emp.id, emp.name);
+                  return (
+                    <option
+                      key={emp.id}
+                      value={emp.id}
+                      disabled={Boolean(booked)}
+                      className={booked ? 'text-outline/50 bg-surface-container-low' : ''}
+                    >
+                      {emp.name} ({emp.department}){booked ? ` — Booked (${booked.deskCode || booked.deskId})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -182,22 +229,34 @@ export const BookingBar: React.FC<BookingBarProps> = ({
         {/* Confirm Reservation CTA Button */}
         <button
           onClick={onConfirm}
-          disabled={isAdminOrManager && !selectedTargetUser}
+          disabled={isBookingBlocked || (isAdminOrManager && !selectedTargetUser)}
           className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0 ${
-            isAdminOrManager && !selectedTargetUser
+            isBookingBlocked
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 cursor-not-allowed opacity-90'
+              : isAdminOrManager && !selectedTargetUser
               ? 'bg-surface-container text-outline cursor-not-allowed border border-outline-variant/30'
               : 'bg-primary text-on-primary shadow-[0_0_18px_rgba(137,206,255,0.4)] hover:shadow-[0_0_26px_rgba(137,206,255,0.7)] hover:bg-primary-fixed'
           }`}
-          title={isAdminOrManager && !selectedTargetUser ? 'Select an employee first' : 'Confirm Desk Booking'}
+          title={
+            isBookingBlocked
+              ? 'Booking not permitted: 1 seat per user per day limit reached'
+              : isAdminOrManager && !selectedTargetUser
+              ? 'Select an employee first'
+              : 'Confirm Desk Booking'
+          }
         >
           <span>
-            {isAdminOrManager
+            {isBookingBlocked
+              ? 'Limit: 1 Seat/Day'
+              : isAdminOrManager
               ? selectedTargetUser
                 ? `Assign to ${selectedTargetUser.name.split(' ')[0]}`
                 : 'Select Employee'
               : 'Confirm Pass'}
           </span>
-          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          <span className="material-symbols-outlined text-[16px]">
+            {isBookingBlocked ? 'block' : 'arrow_forward'}
+          </span>
         </button>
 
         {/* Deselect / Dismiss Button */}
