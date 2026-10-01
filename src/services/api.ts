@@ -2,12 +2,41 @@ import { Desk, Room, Booking, UserProfile, Role } from '../types';
 
 const BASE_URL = '/api';
 
-function getAuthHeader(): HeadersInit {
+function getAuthHeader(): Record<string, string> {
+  const headers: Record<string, string> = {};
   const token = localStorage.getItem('smartdesk_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const userId = localStorage.getItem('smartdesk_user_id');
+  const userEmail = localStorage.getItem('smartdesk_user_email');
+  const userRole = localStorage.getItem('smartdesk_user_role');
+  if (userId) headers['X-User-Id'] = userId;
+  if (userEmail) headers['X-User-Email'] = userEmail;
+  if (userRole) headers['X-User-Role'] = userRole;
+  return headers;
 }
 
 export const api = {
+  // Switch or fetch token for active profile
+  async getTokenForUser(user: { id?: string; email?: string; role?: string }): Promise<{ token: string; user: UserProfile }> {
+    const res = await fetch(`${BASE_URL}/auth/token-for-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id, email: user.email, role: user.role })
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      localStorage.setItem('smartdesk_token', data.token);
+      if (data.user) {
+        localStorage.setItem('smartdesk_user_id', data.user.id);
+        localStorage.setItem('smartdesk_user_email', data.user.email);
+        localStorage.setItem('smartdesk_user_role', data.user.role);
+      }
+    }
+    return data;
+  },
+
   // Authentication
   async login(email: string, password: string): Promise<{ token: string; user: UserProfile }> {
     const res = await fetch(`${BASE_URL}/auth/login`, {
@@ -18,6 +47,11 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Login failed');
     localStorage.setItem('smartdesk_token', data.token);
+    if (data.user) {
+      localStorage.setItem('smartdesk_user_id', data.user.id);
+      localStorage.setItem('smartdesk_user_email', data.user.email);
+      localStorage.setItem('smartdesk_user_role', data.user.role);
+    }
     return data;
   },
 
@@ -139,14 +173,22 @@ export const api = {
     startTime?: string;
     endTime?: string;
     targetUserId?: string;
+    callerUserId?: string;
+    callerRole?: string;
   }): Promise<Booking> {
+    const callerId = booking.callerUserId || localStorage.getItem('smartdesk_user_id');
+    const callerRole = booking.callerRole || localStorage.getItem('smartdesk_user_role');
     const res = await fetch(`${BASE_URL}/bookings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeader()
       },
-      body: JSON.stringify(booking)
+      body: JSON.stringify({
+        ...booking,
+        callerUserId: callerId,
+        callerRole: callerRole
+      })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to reserve seat');

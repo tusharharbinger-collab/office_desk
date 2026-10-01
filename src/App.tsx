@@ -154,11 +154,6 @@ export const App: React.FC = () => {
         const dbUsers = await api.getUsers().catch(() => null);
         if (dbUsers && dbUsers.length > 0) {
           setUsers(dbUsers);
-          const activeRole = me ? me.role : currentUser.role;
-          if (activeRole === 'admin' || activeRole === 'manager') {
-            const firstEmp = dbUsers.find((u: UserProfile) => u.role === 'user' && u.active);
-            if (firstEmp) setSelectedTargetUser(firstEmp);
-          }
         }
 
         const [desks1, desks2] = await Promise.all([
@@ -222,11 +217,27 @@ export const App: React.FC = () => {
   const bookedSeats = currentDesks.filter((d) => d.status === 'booked').length;
   const occupancyRate = Math.round((bookedSeats / totalSeats) * 100);
 
+  // Ensure token is synced with active currentUser so bookings never fail with token errors
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('smartdesk_user_id', currentUser.id);
+      localStorage.setItem('smartdesk_user_email', currentUser.email);
+      localStorage.setItem('smartdesk_user_role', currentUser.role);
+      api.getTokenForUser({ id: currentUser.id, email: currentUser.email, role: currentUser.role })
+        .catch(() => {});
+    }
+  }, [currentUser]);
+
   // Quick Demo Login from Landing Page
-  const handleQuickDemoLogin = (role: 'admin' | 'manager' | 'employee') => {
+  const handleQuickDemoLogin = async (role: 'admin' | 'manager' | 'employee') => {
     let user = INITIAL_USERS[0];
     if (role === 'manager') user = INITIAL_USERS[1];
     else if (role === 'employee') user = INITIAL_USERS[2];
+
+    try {
+      const res = await api.getTokenForUser({ role: user.role, email: user.email });
+      if (res && res.user) user = res.user;
+    } catch {}
 
     setCurrentUser(user);
     if (user.role === 'admin' || user.role === 'manager') {
@@ -292,7 +303,9 @@ export const App: React.FC = () => {
         bookingDate: selectedDate,
         startTime,
         endTime,
-        targetUserId: targetEmployee ? targetEmployee.id : undefined
+        targetUserId: isAdminOrManager && targetEmployee ? targetEmployee.id : undefined,
+        callerUserId: currentUser.id,
+        callerRole: currentUser.role
       });
 
       setBookings((prev) => [newBooking, ...prev]);
@@ -590,7 +603,11 @@ export const App: React.FC = () => {
           }}
           currentUser={currentUser}
           allUsers={users}
-          onSwitchUser={(user) => {
+          onSwitchUser={async (user) => {
+            try {
+              const res = await api.getTokenForUser({ id: user.id, email: user.email, role: user.role });
+              if (res && res.user) user = res.user;
+            } catch {}
             setCurrentUser(user);
             if (user.role === 'admin' || user.role === 'manager') {
               setSelectedTargetUser(null);

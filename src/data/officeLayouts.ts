@@ -2,36 +2,36 @@ import { Desk, Room, UserProfile, Booking, SystemHealthMetric } from '../types';
 
 export const INITIAL_USERS: UserProfile[] = [
   {
-    id: 'usr-1',
+    id: 'usr-admin',
     name: 'Alex Mercer',
-    email: 'alex.mercer@company.com',
+    email: 'admin@smartdesk.com',
     role: 'admin',
     department: 'DevOps & Infrastructure',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
     active: true
   },
   {
-    id: 'usr-2',
+    id: 'usr-manager',
     name: 'Sarah Jenkins',
-    email: 'sarah.jenkins@company.com',
+    email: 'manager@smartdesk.com',
     role: 'manager',
     department: 'Frontend Engineering',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80',
     active: true
   },
   {
-    id: 'usr-3',
+    id: 'usr-employee',
     name: 'David Chen',
-    email: 'david.chen@company.com',
+    email: 'employee@smartdesk.com',
     role: 'user',
     department: 'Product Design',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80',
     active: true
   },
   {
-    id: 'usr-4',
+    id: 'usr-elena',
     name: 'Elena Rostova',
-    email: 'elena.rostova@company.com',
+    email: 'elena@smartdesk.com',
     role: 'user',
     department: 'Data Science',
     avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80',
