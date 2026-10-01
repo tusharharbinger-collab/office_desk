@@ -107,18 +107,18 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`fixed top-0 right-0 h-14 z-40 bg-[#0B0F17]/90 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.5)] flex items-center justify-between px-3.5 sm:px-5 transition-all duration-200 select-none ${
-        isSidebarCollapsed ? 'left-16' : 'left-60'
+      className={`fixed top-0 right-0 h-14 z-40 bg-[#0B0F17]/90 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.5)] flex items-center justify-between px-2 sm:px-4 md:px-5 transition-all duration-200 select-none ${
+        isSidebarCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-60'
       }`}
     >
       {/* ========================================================
           LEFT SECTION: Sidebar Toggle + Segmented Area + Date/Time
          ======================================================== */}
-      <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
         {/* Toggle Sidebar Button */}
         <button
           onClick={onToggleSidebar}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm"
+          className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm flex-shrink-0"
           title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           <span className="material-symbols-outlined text-[20px]">
@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9">
           <button
             onClick={() => onAreaChange('area-1')}
-            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-2 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
               activeArea === 'area-1'
                 ? 'bg-sky-500/15 text-sky-300 font-semibold border border-sky-400/30 shadow-[0_0_12px_rgba(14,165,233,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium'
@@ -150,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => onAreaChange('area-2')}
-            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-2 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
               activeArea === 'area-2'
                 ? 'bg-sky-500/15 text-sky-300 font-semibold border border-sky-400/30 shadow-[0_0_12px_rgba(14,165,233,0.15)]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium'
@@ -180,17 +180,20 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
             title="Filter desk allocation by exact date and time window"
           >
-            <span className="material-symbols-outlined text-[17px] text-sky-400 group-hover:scale-105 transition-transform">
+            <span className="material-symbols-outlined text-[17px] text-sky-400 group-hover:scale-105 transition-transform flex-shrink-0">
               calendar_month
             </span>
-            <span className="font-semibold text-slate-200">
+            <span className="font-semibold text-slate-200 hidden md:inline">
               {formatDisplayDate(selectedDate)}
             </span>
-            <span className="text-white/20 font-light">•</span>
-            <span className="text-sky-300/90 font-mono text-[11px] font-medium">
+            <span className="font-semibold text-slate-200 md:hidden">
+              {formatDisplayDate(selectedDate).split(',')[0]}
+            </span>
+            <span className="text-white/20 font-light hidden sm:inline">•</span>
+            <span className="text-sky-300/90 font-mono text-[11px] font-medium hidden sm:inline">
               {startTime} - {endTime}
             </span>
-            <span className="material-symbols-outlined text-sm text-slate-400 group-hover:text-slate-200 transition-colors">
+            <span className="material-symbols-outlined text-sm text-slate-400 group-hover:text-slate-200 transition-colors flex-shrink-0">
               expand_more
             </span>
           </button>
@@ -366,7 +369,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* ========================================================
           CENTER SECTION: Sleek Omnibar Search
          ======================================================== */}
-      <div className="flex-1 max-w-xs md:max-w-sm xl:max-w-md mx-2.5 min-w-[140px]">
+      <div className="hidden sm:block flex-1 max-w-xs md:max-w-sm xl:max-w-md mx-2 min-w-0">
         <div className="relative flex items-center h-9 rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.08] focus-within:border-sky-500/50 focus-within:ring-2 focus-within:ring-sky-500/15 transition-all px-3">
           <span className="material-symbols-outlined text-slate-400 text-[18px] pointer-events-none flex-shrink-0">
             search
@@ -397,7 +400,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* ========================================================
           RIGHT SECTION: Live Stats + Radar + Landing + Profile
          ======================================================== */}
-      <div className="flex items-center gap-2 flex-shrink-0" ref={userMenuRef}>
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" ref={userMenuRef}>
         {/* Live Occupancy Pill */}
         <div className="hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-emerald-950/30 border border-emerald-500/25 text-xs text-emerald-300 font-medium whitespace-nowrap shadow-sm">
           <span className="relative flex h-2 w-2">
@@ -413,7 +416,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Manager Live Presence Radar Toggle Button */}
         <button
           onClick={() => onTogglePresence(!showPresence)}
-          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm ${
+          className={`inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm ${
             showPresence
               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.2)]'
               : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15] text-slate-400 hover:text-slate-200'
@@ -423,7 +426,7 @@ export const Header: React.FC<HeaderProps> = ({
           <span className={`material-symbols-outlined text-[17px] ${showPresence ? 'animate-pulse text-emerald-400' : ''}`}>
             radar
           </span>
-          <span className="hidden sm:inline">Radar</span>
+          <span className="hidden md:inline">Radar</span>
         </button>
 
         {/* Landing Page Shortcut (Sleek Icon Button) */}

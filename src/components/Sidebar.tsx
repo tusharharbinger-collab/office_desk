@@ -11,6 +11,7 @@ interface SidebarProps {
   isCollapsed: boolean;
   onLogout?: () => void;
   onGoToLanding?: () => void;
+  onCollapse?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,14 +21,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   bookingsCount,
   isCollapsed,
   onLogout,
-  onGoToLanding
+  onGoToLanding,
+  onCollapse
 }) => {
+  const handleTabClick = (tab: ActiveTab) => {
+    onTabChange(tab);
+    if (window.innerWidth < 768 && onCollapse) {
+      onCollapse();
+    }
+  };
+
   return (
-    <aside
-      className={`fixed left-0 top-0 h-full bg-[#0B0F17]/95 backdrop-blur-2xl border-r border-white/[0.08] z-50 flex flex-col pt-4 pb-4 justify-between select-none transition-all duration-200 ${
-        isCollapsed ? 'w-16 items-center px-1' : 'w-60 px-3'
-      }`}
-    >
+    <>
+      {/* Mobile Backdrop when open */}
+      {!isCollapsed && (
+        <div
+          onClick={onCollapse}
+          className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-xs z-40 transition-opacity"
+        />
+      )}
+
+      <aside
+        className={`fixed left-0 top-0 h-full bg-[#0B0F17]/95 backdrop-blur-2xl border-r border-white/[0.08] z-50 flex flex-col pt-4 pb-4 justify-between select-none transition-all duration-200 ${
+          isCollapsed
+            ? 'w-0 -translate-x-full md:translate-x-0 md:w-16 items-center px-0 md:px-1'
+            : 'w-60 translate-x-0 px-3 shadow-2xl'
+        }`}
+      >
       {/* Brand Header */}
       <div className="w-full">
         <div
@@ -56,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="space-y-1 w-full">
           {/* Floor Plan */}
           <button
-            onClick={() => onTabChange('floor-plan')}
+            onClick={() => handleTabClick('floor-plan')}
             title="Floor Plan Map"
             className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
@@ -74,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Time Grid */}
           <button
-            onClick={() => onTabChange('time-grid')}
+            onClick={() => handleTabClick('time-grid')}
             title="Time Grid Scheduler"
             className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
@@ -92,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* My Bookings */}
           <button
-            onClick={() => onTabChange('my-bookings')}
+            onClick={() => handleTabClick('my-bookings')}
             title="My Bookings"
             className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
               isCollapsed ? 'justify-center p-2.5 relative' : 'justify-between px-3 py-2'
@@ -124,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Manager & Admin Analytics */}
           {(userRole === 'manager' || userRole === 'admin') && (
             <button
-              onClick={() => onTabChange('analytics')}
+              onClick={() => handleTabClick('analytics')}
               title="Manager Analytics"
               className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
@@ -151,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Admin Exclusive: User Management */}
           {userRole === 'admin' && (
             <button
-              onClick={() => onTabChange('admin-users')}
+              onClick={() => handleTabClick('admin-users')}
               title="User Management"
               className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
@@ -171,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Admin Exclusive: System Health */}
           {userRole === 'admin' && (
             <button
-              onClick={() => onTabChange('admin-health')}
+              onClick={() => handleTabClick('admin-health')}
               title="System Health"
               className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
@@ -236,5 +256,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
     </aside>
+    </>
   );
 };

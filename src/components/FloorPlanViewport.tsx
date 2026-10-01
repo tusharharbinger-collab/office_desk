@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Desk, Room } from '../types';
 import { WorkArea1Map } from './WorkArea1Map';
 import { WorkArea2Map } from './WorkArea2Map';
@@ -35,77 +35,208 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   const dragStartRef = useRef({ x: 0, y: 0 });
   const [showMinimap, setShowMinimap] = useState(false);
 
+  // Track if user has manually panned/zoomed so resize doesn't override intentional positioning
+  const isUserInteractedRef = useRef(false);
+  const prevSizeRef = useRef<{ w: number; h: number } | null>(null);
+
   // Tooltip state
   const [hoveredDesk, setHoveredDesk] = useState<Desk | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  // Touch tracking for pinch-to-zoom & mobile panning
+  const touchStartDistRef = useRef<number | null>(null);
+  const touchStartScaleRef = useRef<number>(scale);
 
   // Counts for status legend
   const availableCount = desks.filter((d) => d.status === 'available').length;
   const bookedCount = desks.filter((d) => d.status === 'booked').length;
 
-  // Auto-fit floor plan to viewport dimensions
-  const fitToScreen = () => {
+  const mapW = activeArea === 'area-1' ? 1520 : 1680;
+  const mapH = activeArea === 'area-1' ? 1140 : 920;
+
+  // Zoom towards a specific focal point (cursor or viewport center)
+  const zoomAtPoint = useCallback(
+    (targetScale: number, clientX?: number, clientY?: number) => {
+      if (!viewportRef.current) return;
+      const clampedScale = Math.min(Math.max(Number(targetScale.toFixed(2)), 0.35), 2.5);
+      if (clampedScale === scale) return;
+
+      const rect = viewportRef.current.getBoundingClientRect();
+      const pivotX = clientX !== undefined ? clientX - rect.left : rect.width / 2;
+      const pivotY = clientY !== undefined ? clientY - rect.top : rect.height / 2;
+
+      // Keep (pivotX, pivotY) stationary while scaling
+      const newPanX = Math.round(pivotX - (pivotX - pan.x) * (clampedScale / scale));
+      const newPanY = Math.round(pivotY - (pivotY - pan.y) * (clampedScale / scale));
+
+      isUserInteractedRef.current = true;
+      onScaleChange(clampedScale);
+      setPan({ x: newPanX, y: newPanY });
+    },
+    [scale, pan, onScaleChange]
+  );
+
+  // Auto-fit floor plan to viewport dimensions (Fit All: width & height)
+  const fitToScreen = useCallback(() => {
     if (!viewportRef.current) return;
     const { clientWidth, clientHeight } = viewportRef.current;
     if (clientWidth === 0 || clientHeight === 0) return;
 
-    // Dimensions of each blueprint container
-    const mapW = activeArea === 'area-1' ? 1520 : 1680;
-    const mapH = activeArea === 'area-1' ? 1140 : 920;
-
-    // Provide comfortable 40px buffer all around
-    const padX = 48;
-    const padY = 48;
+    const padX = clientWidth < 640 ? 16 : 40;
+    const padY = clientHeight < 640 ? 16 : 40;
     const scaleW = (clientWidth - padX) / mapW;
     const scaleH = (clientHeight - padY) / mapH;
-    const fitScale = Math.min(Math.max(Math.min(scaleW, scaleH), 0.35), 1.25);
+    const fitScale = Math.min(Math.max(Math.min(scaleW, scaleH), 0.3), 1.25);
     const roundedScale = Number(fitScale.toFixed(2));
 
     const centeredX = Math.round((clientWidth - mapW * roundedScale) / 2);
     const centeredY = Math.round((clientHeight - mapH * roundedScale) / 2);
 
+    isUserInteractedRef.current = false;
     onScaleChange(roundedScale);
-    setPan({ x: Math.max(12, centeredX), y: Math.max(12, centeredY) });
-  };
+    setPan({ x: centeredX, y: centeredY });
+  }, [activeArea, mapW, mapH, onScaleChange]);
 
-  // Auto-fit on initial render, window resize, and area switch
+  // Fit Width: Scales to fill available horizontal screen width for large legible desks
+  const fitToWidth = useCallback(() => {
+    if (!viewportRef.current) return;
+    const { clientWidth } = viewportRef.current;
+    if (clientWidth === 0) return;
+
+    const padX = clientWidth < 640 ? 16 : 48;
+    const scaleW = (clientWidth - padX) / mapW;
+    const fitScale = Math.min(Math.max(scaleW, 0.4), 1.5);
+    const roundedScale = Number(fitScale.toFixed(2));
+
+    const centeredX = Math.round((clientWidth - mapW * roundedScale) / 2);
+    const topY = 24;
+
+    isUserInteractedRef.current = false;
+    onScaleChange(roundedScale);
+    setPan({ x: centeredX, y: topY });
+  }, [mapW, onScaleChange]);
+
+  // Robust ResizeObserver: Continuously auto-adjusts layout when window, sidebar, or panel changes
   useEffect(() => {
-    // Delay slightly to ensure layout container has fully computed its width/height
+    const el = viewportRef.current;
+    if (!el) return;
+
+    // Initial fit
     const timer = setTimeout(() => {
       fitToScreen();
     }, 50);
 
-    const handleResize = () => fitToScreen();
-    window.addEventListener('resize', handleResize);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width: newW, height: newH } = entry.contentRect;
+        if (newW <= 0 || newH <= 0) continue;
+
+        if (!prevSizeRef.current) {
+          prevSizeRef.current = { w: newW, h: newH };
+          fitToScreen();
+          continue;
+        }
+
+        const deltaW = newW - prevSizeRef.current.w;
+        const deltaH = newH - prevSizeRef.current.h;
+        prevSizeRef.current = { w: newW, h: newH };
+
+        if (!isUserInteractedRef.current) {
+          // If in auto-fit mode, recalculate fit scale & centering
+          fitToScreen();
+        } else {
+          // If user manually zoomed/panned, adjust pan to keep center stable
+          setPan((prev) => ({
+            x: Math.round(prev.x + deltaW / 2),
+            y: Math.round(prev.y + deltaH / 2)
+          }));
+        }
+      }
+    });
+
+    observer.observe(el);
 
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
     };
-  }, [activeArea]);
+  }, [activeArea, fitToScreen]);
 
-  // Mouse pan handlers
+  // Mouse pan handlers with soft boundaries to prevent blueprint from disappearing
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-desk-id]')) return;
     setIsDragging(true);
+    isUserInteractedRef.current = true;
     dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || !viewportRef.current) return;
+    const vpW = viewportRef.current.clientWidth;
+    const vpH = viewportRef.current.clientHeight;
+    const renderW = mapW * scale;
+    const renderH = mapH * scale;
+
+    const rawX = e.clientX - dragStartRef.current.x;
+    const rawY = e.clientY - dragStartRef.current.y;
+
+    // Keep at least 140px of map visible inside the viewport
+    const minX = -(renderW - 140);
+    const maxX = vpW - 140;
+    const minY = -(renderH - 140);
+    const maxY = vpH - 140;
+
     setPan({
-      x: e.clientX - dragStartRef.current.x,
-      y: e.clientY - dragStartRef.current.y
+      x: Math.min(Math.max(rawX, minX), maxX),
+      y: Math.min(Math.max(rawY, minY), maxY)
     });
   };
 
   const handleMouseUp = () => setIsDragging(false);
 
-  // Wheel zoom
+  // Wheel zoom towards pointer
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
-    onScaleChange(Math.min(Math.max(scale + zoomDelta, 0.35), 2.0));
+    const zoomDelta = e.deltaY < 0 ? 0.09 : -0.09;
+    zoomAtPoint(scale + zoomDelta, e.clientX, e.clientY);
+  };
+
+  // Touch handlers for mobile & tablet pinch/drag
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      if ((e.target as HTMLElement).closest('[data-desk-id]')) return;
+      setIsDragging(true);
+      isUserInteractedRef.current = true;
+      dragStartRef.current = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      isUserInteractedRef.current = true;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDistRef.current = Math.hypot(dx, dy);
+      touchStartScaleRef.current = scale;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging) {
+      const rawX = e.touches[0].clientX - dragStartRef.current.x;
+      const rawY = e.touches[0].clientY - dragStartRef.current.y;
+      setPan({ x: rawX, y: rawY });
+    } else if (e.touches.length === 2 && touchStartDistRef.current) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const ratio = dist / touchStartDistRef.current;
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      zoomAtPoint(touchStartScaleRef.current * ratio, midX, midY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchStartDistRef.current = null;
   };
 
   // Hover handlers
@@ -119,11 +250,8 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   };
 
   // Minimap indicator calculations
-  const mapW = activeArea === 'area-1' ? 1520 : 1680;
-  const mapH = activeArea === 'area-1' ? 1140 : 920;
   const vpWidth = viewportRef.current?.clientWidth || 1000;
   const vpHeight = viewportRef.current?.clientHeight || 700;
-
   const mmWidth = 160;
   const mmHeight = (mmWidth * mapH) / mapW;
 
@@ -135,13 +263,16 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   return (
     <div
       ref={viewportRef}
-      className={`relative w-full h-[calc(100vh-56px)] overflow-hidden select-none bg-background ${
+      className={`relative w-full h-full overflow-hidden select-none bg-background ${
         isDragging ? 'cursor-grabbing' : 'cursor-grab'
       }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Subtle architectural dot grid background */}
       <div className="absolute inset-0 bg-[radial-gradient(#31353e_1px,transparent_1px)] [background-size:28px_28px] opacity-25 pointer-events-none" />
@@ -184,7 +315,7 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       <SeatTooltip desk={hoveredDesk} position={tooltipPos} />
 
       {/* Floating Status Legend (Bottom-Left Pill, non-obtrusive) */}
-      <div className="absolute bottom-5 left-5 z-20 hidden sm:flex items-center gap-3.5 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] px-3.5 py-1.5 rounded-xl shadow-xl pointer-events-none text-xs text-slate-300 font-medium font-mono">
+      <div className="absolute bottom-5 left-5 z-20 hidden xs:flex sm:flex items-center gap-2.5 sm:gap-3.5 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] px-3 py-1.5 rounded-xl shadow-xl pointer-events-none text-[11px] sm:text-xs text-slate-300 font-medium font-mono">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
           <span>Available ({availableCount})</span>
@@ -197,32 +328,35 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
           <span className="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_#fb7185]" />
           <span>Occupied ({bookedCount})</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="hidden sm:flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
           <span>Hold</span>
         </div>
       </div>
 
-      {/* Floating Canvas Controls Dock (Bottom-Right) */}
-      <div className="absolute bottom-5 right-5 z-30 flex items-center gap-1.5 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-1.5 shadow-[0_8px_25px_rgba(0,0,0,0.6)]">
+      {/* Floating Canvas Controls Dock (Bottom-Right, Fully Responsive) */}
+      <div className="absolute bottom-5 right-5 z-30 flex items-center gap-1 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-1.5 shadow-[0_8px_25px_rgba(0,0,0,0.6)]">
+        {/* Zoom Out */}
         <button
-          onClick={() => onScaleChange(Math.max(scale - 0.1, 0.35))}
+          onClick={() => zoomAtPoint(scale - 0.15)}
           className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
           title="Zoom Out"
         >
           <span className="material-symbols-outlined text-base">remove</span>
         </button>
 
+        {/* Current Zoom Percentage (Click to toggle 100% / Fit) */}
         <button
-          onClick={fitToScreen}
-          className="px-2.5 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 flex items-center justify-center text-xs font-mono font-medium transition-all cursor-pointer"
-          title="Click to Auto-Fit Blueprint"
+          onClick={() => (scale === 1 ? fitToScreen() : zoomAtPoint(1.0))}
+          className="px-2 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 flex items-center justify-center text-xs font-mono font-medium transition-all cursor-pointer min-w-[42px]"
+          title="Click to toggle 100% / Auto-Fit"
         >
           {Math.round(scale * 100)}%
         </button>
 
+        {/* Zoom In */}
         <button
-          onClick={() => onScaleChange(Math.min(scale + 0.1, 2.0))}
+          onClick={() => zoomAtPoint(scale + 0.15)}
           className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
           title="Zoom In"
         >
@@ -231,15 +365,27 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
 
         <div className="w-[1px] h-5 bg-white/[0.1] mx-0.5" />
 
+        {/* Fit All to Screen */}
         <button
           onClick={fitToScreen}
           className="h-8 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-sky-400 flex items-center gap-1.5 text-xs transition-all cursor-pointer"
-          title="Fit Blueprint to Screen"
+          title="Fit entire blueprint inside window"
         >
           <span className="material-symbols-outlined text-base text-sky-400">crop_free</span>
           <span className="hidden sm:inline text-[11px] font-medium">Fit</span>
         </button>
 
+        {/* Fit Width (Fills Screen Width for Large Desks) */}
+        <button
+          onClick={fitToWidth}
+          className="hidden sm:flex h-8 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-emerald-400 items-center gap-1.5 text-xs transition-all cursor-pointer"
+          title="Fit blueprint to full window width (large legible workstations)"
+        >
+          <span className="material-symbols-outlined text-base text-emerald-400">fit_screen</span>
+          <span className="text-[11px] font-medium">Width</span>
+        </button>
+
+        {/* Minimap Radar Toggle */}
         <button
           onClick={() => setShowMinimap(!showMinimap)}
           className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-xs transition-all cursor-pointer ${
@@ -247,10 +393,10 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
               ? 'bg-sky-500/15 text-sky-300 border border-sky-400/30 shadow-sm font-semibold'
               : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white'
           }`}
-          title="Toggle Overview Minimap"
+          title="Toggle Overview Radar"
         >
           <span className="material-symbols-outlined text-base">map</span>
-          <span className="hidden sm:inline text-[11px] font-medium">Minimap</span>
+          <span className="hidden md:inline text-[11px] font-medium">Radar</span>
         </button>
       </div>
 

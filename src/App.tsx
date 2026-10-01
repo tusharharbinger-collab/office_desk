@@ -228,6 +228,18 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedDate, startTime, endTime, activeArea]);
 
+  // Auto-collapse sidebar on screens < 1024px for maximum floor plan space
+  useEffect(() => {
+    const handleScreenResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarCollapsed(true);
+      }
+    };
+    handleScreenResize();
+    window.addEventListener('resize', handleScreenResize);
+    return () => window.removeEventListener('resize', handleScreenResize);
+  }, []);
+
   const currentDesks = activeArea === 'area-1' ? area1Desks : area2Desks;
   const currentRooms = activeArea === 'area-1' ? area1Rooms : area2Rooms;
 
@@ -594,7 +606,7 @@ export const App: React.FC = () => {
 
   // Authenticated Dashboard Experience (Clean, Spacious & Unblocked)
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-surface text-on-surface">
+    <div className="flex h-screen w-full overflow-hidden bg-surface text-on-surface">
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-surface-container-high/95 backdrop-blur-2xl border border-primary/50 text-on-surface px-5 py-2.5 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.7)] flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
@@ -603,7 +615,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Left Sidebar (Supports Collapsible Rail Mode) */}
+      {/* Left Sidebar (Supports Collapsible Rail Mode & Mobile Drawer) */}
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -612,12 +624,13 @@ export const App: React.FC = () => {
         isCollapsed={isSidebarCollapsed}
         onLogout={handleLogout}
         onGoToLanding={() => setIsAuthenticated(false)}
+        onCollapse={() => setIsSidebarCollapsed(true)}
       />
 
-      {/* Main View Area */}
+      {/* Main View Area (Responsive left margin for mobile / desktop) */}
       <div
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-200 ${
-          isSidebarCollapsed ? 'pl-16' : 'pl-60'
+        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-200 ${
+          isSidebarCollapsed ? 'pl-0 md:pl-16' : 'pl-0 md:pl-60'
         }`}
       >
         {/* Single Unified Sleek Header */}

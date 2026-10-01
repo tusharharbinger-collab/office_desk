@@ -89,7 +89,7 @@ export const BookingBar: React.FC<BookingBarProps> = ({
 
   return (
     <div
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-5xl bg-surface-container-high/95 backdrop-blur-2xl border-2 border-primary/50 rounded-2xl px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.7)] animate-in fade-in slide-in-from-bottom-5 duration-200"
+      className="fixed bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-50 w-[96%] sm:w-[94%] max-w-5xl max-h-[85vh] overflow-y-auto bg-surface-container-high/95 backdrop-blur-2xl border-2 border-primary/50 rounded-2xl px-3 sm:px-5 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.7)] animate-in fade-in slide-in-from-bottom-5 duration-200"
     >
       {/* Selected Desk Information & Date/Time Badge */}
       <div className="flex items-center gap-3">
