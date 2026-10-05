@@ -10,7 +10,9 @@ export default defineConfig({
     host: true,
     strictPort: false,
     watch: {
-      ignored: ['**/smartdesk.db*', '**/smartdesk.db-wal*', '**/smartdesk.db-shm*']
+      usePolling: true,
+      interval: 800,
+      ignored: ['**/smartdesk.db*', '**/smartdesk.db-wal*', '**/smartdesk.db-shm*', '**/*.webp', '**/*.jpg', '**/*.png']
     },
     proxy: {
       '/api': {

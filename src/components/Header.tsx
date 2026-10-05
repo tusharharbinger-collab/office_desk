@@ -4,7 +4,7 @@ import {
   getTodayISODate,
   getTomorrowISODate,
   formatDisplayDate,
-  TIME_SLOTS
+  calculateDurationHours
 } from '../utils/dateTime';
 import { Avatar } from './Avatar';
 
@@ -27,20 +27,21 @@ interface HeaderProps {
   occupancyRate: number;
   totalSeats: number;
   bookedSeats: number;
-  // Unified controls from secondary bar
-  scale: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onResetZoom: () => void;
+  // Unified controls from secondary bar (optional)
+  scale?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onResetZoom?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  showPresence: boolean;
-  onTogglePresence: (val: boolean) => void;
   // Sidebar toggle
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   onLogout?: () => void;
-  onGoToLanding?: () => void;
+  activeTab?: string;
+  onTabChange?: (tab: any) => void;
+  onOpenOutlookEmails?: () => void;
+  emailCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -62,12 +63,13 @@ export const Header: React.FC<HeaderProps> = ({
   bookedSeats,
   searchQuery,
   onSearchChange,
-  showPresence,
-  onTogglePresence,
   isSidebarCollapsed,
   onToggleSidebar,
   onLogout,
-  onGoToLanding
+  activeTab,
+  onTabChange,
+  onOpenOutlookEmails,
+  emailCount
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [dateTimeOpen, setDateTimeOpen] = useState(false);
@@ -122,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header
       className={`fixed top-0 right-0 h-14 z-40 bg-[#090D16]/90 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.6)] flex items-center justify-between px-2.5 sm:px-4 md:px-5 transition-all duration-200 select-none ${
-        isSidebarCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-60'
+        isSidebarCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-64'
       }`}
     >
       {/* ========================================================
@@ -140,48 +142,91 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </button>
 
-        {/* Segmented Area Switcher (Apple/Linear Style) */}
-        <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9 shadow-inner">
-          <button
-            onClick={() => onAreaChange('area-1')}
-            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-              activeArea === 'area-1'
-                ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
-            }`}
-          >
-            <span>Area 1</span>
-            <span
-              className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                activeArea === 'area-1'
-                  ? 'bg-sky-400/25 text-sky-200 font-bold'
-                  : 'text-slate-500 bg-white/[0.04]'
-              }`}
+        {activeTab && activeTab !== 'floor-plan' ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onTabChange && onTabChange('floor-plan')}
+              className="inline-flex items-center gap-1.5 px-3 h-8.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-300 text-xs font-semibold cursor-pointer transition-all shadow-sm"
+              title="Return to Floor Plan Map"
             >
-              130
-            </span>
-          </button>
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span className="hidden sm:inline">Floor Plan</span>
+            </button>
+            <div className="flex items-center gap-1.5 px-2.5 h-8.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-semibold text-white">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />
+              <span>
+                {activeTab === 'time-grid'
+                  ? 'Time Grid Scheduler'
+                  : activeTab === 'my-bookings'
+                  ? 'My Bookings'
+                  : activeTab === 'meeting-rooms'
+                  ? 'Meeting Room Booking'
+                  : activeTab === 'analytics'
+                  ? 'Workplace Analytics'
+                  : activeTab === 'admin-users'
+                  ? 'Users Directory'
+                  : activeTab === 'admin-health'
+                  ? 'System Health'
+                  : activeTab}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            {/* Segmented Area Switcher (Apple/Linear Style) */}
+            <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9 shadow-inner">
+              <button
+                onClick={() => onAreaChange('area-1')}
+                className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
+                  activeArea === 'area-1'
+                    ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
+                }`}
+              >
+                <span>Area 1</span>
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                    activeArea === 'area-1'
+                      ? 'bg-sky-400/25 text-sky-200 font-bold'
+                      : 'text-slate-500 bg-white/[0.04]'
+                  }`}
+                >
+                  130
+                </span>
+              </button>
 
-          <button
-            onClick={() => onAreaChange('area-2')}
-            className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-              activeArea === 'area-2'
-                ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
-            }`}
-          >
-            <span>Area 2</span>
-            <span
-              className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                activeArea === 'area-2'
-                  ? 'bg-sky-400/25 text-sky-200 font-bold'
-                  : 'text-slate-500 bg-white/[0.04]'
-              }`}
+              <button
+                onClick={() => onAreaChange('area-2')}
+                className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
+                  activeArea === 'area-2'
+                    ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
+                }`}
+              >
+                <span>Area 2</span>
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                    activeArea === 'area-2'
+                      ? 'bg-sky-400/25 text-sky-200 font-bold'
+                      : 'text-slate-500 bg-white/[0.04]'
+                  }`}
+                >
+                  80
+                </span>
+              </button>
+            </div>
+
+            {/* Nav Bar Meeting Rooms Booking Button */}
+            <button
+              onClick={() => onTabChange && onTabChange('meeting-rooms')}
+              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-300 hover:text-white text-xs font-semibold cursor-pointer transition-all shadow-sm"
+              title="Meeting Room Booking & Management"
             >
-              80
-            </span>
-          </button>
-        </div>
+              <span className="material-symbols-outlined text-[17px] text-sky-400">meeting_room</span>
+              <span className="hidden sm:inline">Meeting Rooms</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================================
@@ -217,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* ========================================================
-          RIGHT ZONE: Schedule + Live Stats + Radar + Store + Profile
+          RIGHT ZONE: Schedule + Live Stats + Store + Profile
          ======================================================== */}
       <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 flex-shrink-0" ref={userMenuRef}>
         {/* Interactive Date & Shift Selector Capsule */}
@@ -317,83 +362,60 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              {/* 2. Shift / Time Slot Selection */}
+              {/* 2. Manual Time In & Time Out Selection */}
               <div className="mb-3.5">
-                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
-                  2. Shift Window
-                </label>
-                <div className="grid grid-cols-2 gap-1.5 mb-2">
-                  {TIME_SLOTS.filter((s) => s.id !== 'custom').map((slot) => {
-                    const isSelected =
-                      selectedTimeSlot === slot.id ||
-                      (startTime === slot.startTime && endTime === slot.endTime);
-                    return (
-                      <button
-                        type="button"
-                        key={slot.id}
-                        onClick={() => onTimeSlotChange(slot.id, slot.startTime, slot.endTime)}
-                        className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-sky-500/20 border-sky-400 text-sky-200 ring-1 ring-sky-400/40 font-medium shadow-sm'
-                            : 'bg-[#1c2233] border-slate-700/60 text-slate-300 hover:text-white hover:bg-[#232b40]'
-                        }`}
-                      >
-                        <p className="text-xs leading-none mb-1.5 text-slate-100 font-semibold">
-                          {slot.shortLabel}
-                        </p>
-                        <p className="text-[10px] font-mono text-sky-400 font-medium leading-none">
-                          {slot.startTime}–{slot.endTime}
-                        </p>
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+                    2. Time In & Time Out
+                  </label>
+                  <span className="text-[10px] font-mono text-sky-400 font-bold bg-sky-500/15 border border-sky-400/30 px-2 py-0.5 rounded-lg">
+                    {calculateDurationHours(startTime, endTime)} hrs
+                  </span>
                 </div>
 
-                {/* Custom Time Range */}
-                <div className="p-2.5 rounded-xl bg-[#0d111a] border border-slate-700/60">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] text-slate-300 font-medium">Custom Hours</span>
-                    <button
-                      type="button"
-                      onClick={() => onTimeSlotChange('custom', startTime, endTime)}
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded cursor-pointer transition-colors ${
-                        selectedTimeSlot === 'custom'
-                          ? 'bg-sky-400 text-black font-bold'
-                          : 'text-slate-400 hover:text-white bg-white/[0.04]'
-                      }`}
-                    >
-                      {selectedTimeSlot === 'custom' ? 'Active' : 'Set Custom'}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <span className="text-[9px] text-slate-400 block mb-0.5 font-mono">Start</span>
+                <div className="p-3 rounded-xl bg-[#0d111a] border border-slate-700/60 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[9px] text-slate-400 block mb-1 font-mono uppercase flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-xs text-emerald-400">login</span>
+                        <span>Time In</span>
+                      </span>
                       <input
                         type="time"
                         value={startTime}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (onCustomTimeChange) onCustomTimeChange(val, endTime);
-                          else onTimeSlotChange('custom', val, endTime);
+                          if (val) {
+                            if (onCustomTimeChange) onCustomTimeChange(val, endTime);
+                            else onTimeSlotChange('custom', val, endTime);
+                          }
                         }}
-                        className="w-full bg-[#1c2233] border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-slate-100 font-mono focus:border-sky-400 focus:outline-none"
+                        className="w-full bg-[#1c2233] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:border-sky-400 focus:outline-none cursor-pointer"
                       />
                     </div>
-                    <span className="text-slate-500 text-xs mt-3.5">→</span>
-                    <div className="flex-1">
-                      <span className="text-[9px] text-slate-400 block mb-0.5 font-mono">End</span>
+
+                    <div>
+                      <span className="text-[9px] text-slate-400 block mb-1 font-mono uppercase flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-xs text-rose-400">logout</span>
+                        <span>Time Out</span>
+                      </span>
                       <input
                         type="time"
                         value={endTime}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (onCustomTimeChange) onCustomTimeChange(startTime, val);
-                          else onTimeSlotChange('custom', startTime, val);
+                          if (val) {
+                            if (onCustomTimeChange) onCustomTimeChange(startTime, val);
+                            else onTimeSlotChange('custom', startTime, val);
+                          }
                         }}
-                        className="w-full bg-[#1c2233] border border-slate-700/80 rounded-lg px-2 py-1 text-xs text-slate-100 font-mono focus:border-sky-400 focus:outline-none"
+                        className="w-full bg-[#1c2233] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:border-sky-400 focus:outline-none cursor-pointer"
                       />
                     </div>
                   </div>
+                  <p className="text-[10px] text-slate-400 font-mono text-center pt-0.5">
+                    Viewing floor availability for {startTime} – {endTime}
+                  </p>
                 </div>
               </div>
 
@@ -431,30 +453,26 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Manager Live Presence Radar Toggle Button */}
-        <button
-          onClick={() => onTogglePresence(!showPresence)}
-          className={`inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm ${
-            showPresence
-              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.2)]'
-              : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15] text-slate-300 hover:text-white'
-          }`}
-          title="Toggle Radar visualization of live desks"
-        >
-          <span className={`material-symbols-outlined text-[17px] ${showPresence ? 'animate-pulse text-emerald-400' : 'text-slate-400'}`}>
-            radar
-          </span>
-          <span className="hidden xl:inline">Radar</span>
-        </button>
-
-        {/* Landing Page Shortcut (Sleek Icon Button) */}
-        {onGoToLanding && (
+        {/* Microsoft Outlook Sync & Emails Button */}
+        {onOpenOutlookEmails && (
           <button
-            onClick={onGoToLanding}
-            className="w-9 h-9 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-400 hover:text-sky-300 flex items-center justify-center transition-all cursor-pointer shadow-sm flex-shrink-0"
-            title="Switch to Landing Page"
+            onClick={onOpenOutlookEmails}
+            className="inline-flex items-center gap-2 h-9 px-2.5 sm:px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-300 hover:text-white text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm group"
+            title="Microsoft Outlook Email & Calendar Sync"
           >
-            <span className="material-symbols-outlined text-[18px]">storefront</span>
+            {/* Microsoft 4-Color Grid */}
+            <div className="grid grid-cols-2 gap-0.5 w-3.5 h-3.5 flex-shrink-0">
+              <div className="bg-[#f25022] rounded-[1px]"></div>
+              <div className="bg-[#7fba00] rounded-[1px]"></div>
+              <div className="bg-[#00a4ef] rounded-[1px]"></div>
+              <div className="bg-[#ffb900] rounded-[1px]"></div>
+            </div>
+            <span className="hidden xl:inline group-hover:text-sky-300 transition-colors">Outlook Sync</span>
+            {emailCount !== undefined && emailCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-sky-500/20 text-sky-300 text-[10px] font-mono font-bold border border-sky-400/30">
+                {emailCount}
+              </span>
+            )}
           </button>
         )}
 
@@ -520,7 +538,7 @@ export const Header: React.FC<HeaderProps> = ({
                       currentUser.role
                     )}`}
                   >
-                    {currentUser.role} • {currentUser.department}
+                    {currentUser.role}
                   </span>
                 </div>
               </div>
@@ -557,7 +575,7 @@ export const Header: React.FC<HeaderProps> = ({
                         {user.name}
                       </p>
                       <p className="text-[10px] text-slate-500 truncate">
-                        {user.department}
+                        {user.email}
                       </p>
                     </div>
                     <span
@@ -583,19 +601,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="material-symbols-outlined text-sm">person_add</span>
                   <span>Create New Account</span>
                 </button>
-
-                {onGoToLanding && (
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      onGoToLanding();
-                    }}
-                    className="w-full py-1.5 px-3 rounded-xl hover:bg-white/[0.06] text-slate-400 hover:text-white text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-sm">storefront</span>
-                    <span>Landing Page</span>
-                  </button>
-                )}
 
                 {onLogout && (
                   <button

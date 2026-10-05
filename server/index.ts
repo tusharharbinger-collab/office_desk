@@ -8,6 +8,7 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { db, initDatabase } from './db';
+import { sendOutlookBookingNotification, generateIcsCalendar } from './emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smartdesk_super_secret_jwt_key_2026';
 const PORT = process.env.PORT || 5180;
@@ -483,7 +484,7 @@ app.get('/api/desks', (req, res) => {
 });
 
 app.get('/api/rooms', (req, res) => {
-  const areaId = req.query.areaId as string || 'area-1';
+  const areaId = req.query.areaId as string;
   const { date: defaultDate } = getLocalDateAndTime();
   const queryDate = (req.query.date as string) || defaultDate;
   const startTime = (req.query.startTime as string) || '09:00';
@@ -492,7 +493,7 @@ app.get('/api/rooms', (req, res) => {
   expirePastBookings();
 
   try {
-    const rooms: any[] = db.prepare(`
+    let sql = `
       SELECT r.*,
              b.id as booking_id,
              b.start_time,
@@ -509,8 +510,15 @@ app.get('/api/rooms', (req, res) => {
                           AND b.booking_date = ?
                           AND (b.start_time < ? AND b.end_time > ?)
       LEFT JOIN users u ON b.user_id = u.id
-      WHERE r.area_id = ?
-    `).all(queryDate, endTime, startTime, areaId);
+    `;
+    const params: any[] = [queryDate, endTime, startTime];
+    if (areaId && areaId !== 'all') {
+      sql += ' WHERE r.area_id = ?';
+      params.push(areaId);
+    }
+    sql += ' ORDER BY r.name ASC';
+
+    const rooms: any[] = db.prepare(sql).all(...params);
 
     const formatted = rooms.map((r) => ({
       id: r.id,
@@ -538,11 +546,87 @@ app.get('/api/rooms', (req, res) => {
   }
 });
 
+// Create new meeting room (Manager & Admin only)
+app.post('/api/rooms', authenticateToken, (req: AuthRequest, res) => {
+  const callerUser = req.user!;
+  if (callerUser.role !== 'admin' && callerUser.role !== 'manager') {
+    return res.status(403).json({ error: 'Only Managers and Admins can create meeting rooms' });
+  }
+
+  const { name, code, areaId, capacity, amenities } = req.body;
+  if (!name || !code) {
+    return res.status(400).json({ error: 'Room name and code are required' });
+  }
+
+  try {
+    const id = `RM-${Date.now().toString().slice(-5)}`;
+    const area = areaId || 'area-1';
+    const cap = Number(capacity) || 4;
+    const amenList = Array.isArray(amenities)
+      ? amenities
+      : ['4K Video Conferencing', 'Digital Whiteboard'];
+    const amenJson = JSON.stringify(amenList);
+
+    db.prepare(`
+      INSERT INTO rooms (id, code, name, area_id, capacity, status, amenities)
+      VALUES (?, ?, ?, ?, ?, 'available', ?)
+    `).run(id, code.toUpperCase(), name, area, cap, amenJson);
+
+    db.prepare(`
+      INSERT INTO system_logs (event_type, user_id, details)
+      VALUES ('ROOM_CREATED', ?, ?)
+    `).run(callerUser.id, `${callerUser.role.toUpperCase()} ${callerUser.name} created meeting room ${name} (${code}) in ${area}`);
+
+    res.status(201).json({
+      id,
+      code: code.toUpperCase(),
+      name,
+      areaId: area,
+      capacity: cap,
+      status: 'available',
+      amenities: amenList
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete meeting room (Manager & Admin only)
+app.delete('/api/rooms/:id', authenticateToken, (req: AuthRequest, res) => {
+  const callerUser = req.user!;
+  if (callerUser.role !== 'admin' && callerUser.role !== 'manager') {
+    return res.status(403).json({ error: 'Only Managers and Admins can delete meeting rooms' });
+  }
+
+  const { id } = req.params;
+  try {
+    const room: any = db.prepare('SELECT * FROM rooms WHERE id = ?').get(id);
+    if (!room) {
+      return res.status(404).json({ error: 'Meeting room not found' });
+    }
+
+    // Cancel active bookings for this room
+    db.prepare("UPDATE bookings SET status = 'cancelled' WHERE room_id = ? AND status = 'active'").run(id);
+
+    // Delete room
+    db.prepare('DELETE FROM rooms WHERE id = ?').run(id);
+
+    db.prepare(`
+      INSERT INTO system_logs (event_type, user_id, details)
+      VALUES ('ROOM_DELETED', ?, ?)
+    `).run(callerUser.id, `${callerUser.role.toUpperCase()} ${callerUser.name} deleted meeting room ${room.name} (${room.code})`);
+
+    res.json({ success: true, message: `Meeting room ${room.name} deleted successfully`, id });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ========================================================
 // 3. BOOKINGS MANAGEMENT (REAL SQLITE TRANSACTIONS)
 // ========================================================
-app.post('/api/bookings', authenticateToken, (req: AuthRequest, res) => {
-  let { deskId, roomId, areaId, duration, bookingDate, startTime, endTime, targetUserId } = req.body;
+app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
+  let { deskId, roomId, areaId, duration, bookingDate, bookingDates, dates, startTime, endTime, targetUserId, attendeeIds, includeTeams } = req.body;
   const callerUser = req.user!;
 
   if (!deskId && !roomId) {
@@ -550,8 +634,31 @@ app.post('/api/bookings', authenticateToken, (req: AuthRequest, res) => {
   }
 
   const { date: defaultDate } = getLocalDateAndTime();
-  if (!bookingDate || bookingDate.toLowerCase().includes('today')) {
-    bookingDate = defaultDate;
+
+  // Normalize requested dates list
+  let rawDates: string[] = [];
+  if (Array.isArray(bookingDates) && bookingDates.length > 0) {
+    rawDates = bookingDates;
+  } else if (Array.isArray(dates) && dates.length > 0) {
+    rawDates = dates;
+  } else if (bookingDate) {
+    rawDates = [bookingDate];
+  } else {
+    rawDates = [defaultDate];
+  }
+
+  // Filter and sanitize ISO dates (YYYY-MM-DD)
+  const requestedDates: string[] = Array.from(
+    new Set(
+      rawDates.map((d: any) => {
+        const str = String(d || '').trim();
+        return (!str || str.toLowerCase().includes('today')) ? defaultDate : str;
+      })
+    )
+  ).sort();
+
+  if (requestedDates.length === 0) {
+    return res.status(400).json({ error: 'At least one valid booking date is required' });
   }
 
   // Derive startTime and endTime if not explicitly provided
@@ -575,8 +682,9 @@ app.post('/api/bookings', authenticateToken, (req: AuthRequest, res) => {
   const callerRole = (req.body && req.body.callerRole) || (req.headers['x-user-role'] as string) || callerUser.role;
   const isCallerAdminOrManager = callerRole === 'admin' || callerRole === 'manager';
 
-  // If Admin or Manager: must allocate to an employee (cannot allocate for themselves)
-  if (isCallerAdminOrManager) {
+  // For individual DESKS only: Admins and Managers must allocate to an employee (not themselves)
+  // For MEETING ROOMS: Users, Managers, and Admins can all book for themselves, AND managers/admins can book for other users!
+  if (deskId && isCallerAdminOrManager) {
     if (!targetUserId || targetUserId === callerUser.id) {
       return res.status(403).json({
         error: `${callerRole === 'admin' ? 'Admins' : 'Managers'} cannot book seats for themselves. Please select an existing employee to allocate this seat.`
@@ -608,125 +716,249 @@ app.post('/api/bookings', authenticateToken, (req: AuthRequest, res) => {
       assignedUserId = callerUser.id;
     }
 
-    // ========================================================
-    // BUSINESS RULE: STRICT 1 SEAT PER USER PER DAY
-    // A user can book only one seat per day.
-    // If a seat has already been booked for this user on this date,
-    // no additional booking can be made (by user, manager, or admin).
-    // ========================================================
-    if (deskId) {
-      const existingUserDeskBooking = db.prepare(`
-        SELECT id, desk_id, desk_code, pod_name, start_time, end_time 
-        FROM bookings 
-        WHERE user_id = ? 
-          AND booking_date = ? 
-          AND status = 'active'
-          AND desk_id IS NOT NULL
-      `).get(assignedUserId, bookingDate) as { id: string; desk_id: string; desk_code: string; pod_name: string; start_time: string; end_time: string } | undefined;
-
-      if (existingUserDeskBooking) {
-        const targetName = targetEmployee ? targetEmployee.name : callerUser.name;
-        const seatName = existingUserDeskBooking.desk_code || existingUserDeskBooking.desk_id;
-        return res.status(409).json({
-          error: isCallerAdminOrManager
-            ? `${targetName} already has Seat ${seatName} reserved on ${bookingDate}. Each employee is limited to one seat per day.`
-            : `You already have Seat ${seatName} reserved on ${bookingDate}. You can book only one seat per day. Cancel your current reservation if you wish to choose a different seat.`
-        });
-      }
-    }
-
-    // Check for overlapping reservation on this exact date and time window
-    if (deskId) {
-      const activeOverlap = db.prepare(`
-        SELECT id, start_time, end_time FROM bookings 
-        WHERE desk_id = ? 
-          AND status = 'active'
-          AND booking_date = ?
-          AND (start_time < ? AND end_time > ?)
-      `).get(deskId, bookingDate, endTime, startTime) as { id: string; start_time: string; end_time: string } | undefined;
-
-      if (activeOverlap) {
-        return res.status(409).json({ 
-          error: `Desk ${deskId} is already reserved on ${bookingDate} between ${activeOverlap.start_time} and ${activeOverlap.end_time}.` 
-        });
-      }
-    }
-
-    if (roomId) {
-      const activeRoomOverlap = db.prepare(`
-        SELECT id, start_time, end_time FROM bookings 
-        WHERE room_id = ? 
-          AND status = 'active'
-          AND booking_date = ?
-          AND (start_time < ? AND end_time > ?)
-      `).get(roomId, bookingDate, endTime, startTime) as { id: string; start_time: string; end_time: string } | undefined;
-
-      if (activeRoomOverlap) {
-        return res.status(409).json({ 
-          error: `Room ${roomId} is already reserved on ${bookingDate} between ${activeRoomOverlap.start_time} and ${activeRoomOverlap.end_time}.` 
-        });
-      }
-    }
-
-    const desk: any = deskId ? db.prepare('SELECT * FROM desks WHERE id = ?').get(deskId) : null;
-    const room: any = roomId ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId) : null;
-
-    const bookingId = `BKG-${Date.now().toString().slice(-4)}`;
-    const cost = desk ? (desk.price_per_hour || 15) * 8 : 80;
-
-    db.prepare(`
-      INSERT INTO bookings (id, user_id, desk_id, room_id, area_id, desk_code, pod_name, booking_date, duration, start_time, end_time, status, check_in_status, cost)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?)
-    `).run(
-      bookingId,
-      assignedUserId,
-      deskId || null,
-      roomId || null,
-      areaId,
-      desk ? desk.code : room.code,
-      desk ? desk.pod_name : room.name,
-      bookingDate,
-      duration || 'Full Day (8h)',
-      startTime,
-      endTime,
-      cost
-    );
-
-    // Audit log
-    const auditDetails = targetEmployee
-      ? `${callerRole.toUpperCase()} ${callerUser.name} allocated seat ${deskId || roomId} to employee ${targetEmployee.name} (${targetEmployee.department}) for ${bookingDate} (${startTime}-${endTime})`
-      : `Employee ${callerUser.name} reserved seat ${deskId || roomId} for ${bookingDate} (${startTime}-${endTime})`;
-
-    db.prepare(`
-      INSERT INTO system_logs (event_type, user_id, details)
-      VALUES ('SEAT_ALLOCATION', ?, ?)
-    `).run(callerUser.id, auditDetails);
-
     const effectiveName = targetEmployee ? targetEmployee.name : callerUser.name;
     const effectiveRole = targetEmployee ? targetEmployee.role : callerUser.role;
     const effectiveAvatar = targetEmployee
       ? targetEmployee.avatar
       : (callerUser.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80');
 
-    res.status(201).json({
-      id: bookingId,
-      userId: assignedUserId,
-      deskId,
-      roomId,
-      areaId,
-      deskCode: desk ? desk.code : room.code,
-      podName: desk ? desk.pod_name : room.name,
-      date: bookingDate,
-      duration: duration || 'Full Day (8h)',
-      startTime,
-      endTime,
-      status: 'active',
-      userName: effectiveName,
-      userRole: effectiveRole,
-      userAvatar: effectiveAvatar,
-      checkInStatus: true,
-      cost
-    });
+    // ========================================================
+    // BUSINESS RULE: STRICT 1 SEAT PER USER PER DAY
+    // A user can book only one seat per day.
+    // Loop through ALL requested dates to ensure NO date violates this rule.
+    // ========================================================
+    if (deskId) {
+      for (const singleDate of requestedDates) {
+        const existingUserDeskBooking = db.prepare(`
+          SELECT id, desk_id, desk_code, pod_name, start_time, end_time, booking_date 
+          FROM bookings 
+          WHERE user_id = ? 
+            AND booking_date = ? 
+            AND status IN ('active', 'upcoming')
+            AND desk_id IS NOT NULL
+        `).get(assignedUserId, singleDate) as { id: string; desk_id: string; desk_code: string; pod_name: string; start_time: string; end_time: string; booking_date: string } | undefined;
+
+        if (existingUserDeskBooking) {
+          const seatName = existingUserDeskBooking.desk_code || existingUserDeskBooking.desk_id;
+          return res.status(409).json({
+            error: isCallerAdminOrManager
+              ? `Rule Violation: ${effectiveName} already has Seat ${seatName} reserved on ${singleDate}. Limit: strictly 1 seat per user per day.`
+              : `Rule Violation: You already have Seat ${seatName} reserved on ${singleDate}. Limit: strictly 1 seat per user per day. Cancel your current reservation if you wish to choose a different seat.`,
+            conflictDate: singleDate,
+            conflictType: 'user_already_has_seat'
+          });
+        }
+
+        // Check for overlapping reservation on this exact date and time window
+        const activeOverlap = db.prepare(`
+          SELECT id, start_time, end_time, booking_date FROM bookings 
+          WHERE desk_id = ? 
+            AND status IN ('active', 'upcoming')
+            AND booking_date = ?
+            AND (start_time < ? AND end_time > ?)
+        `).get(deskId, singleDate, endTime, startTime) as { id: string; start_time: string; end_time: string } | undefined;
+
+        if (activeOverlap) {
+          return res.status(409).json({ 
+            error: `Desk ${deskId} is already reserved on ${singleDate} between ${activeOverlap.start_time} and ${activeOverlap.end_time}.`,
+            conflictDate: singleDate,
+            conflictType: 'seat_occupied'
+          });
+        }
+      }
+    }
+
+    if (roomId) {
+      for (const singleDate of requestedDates) {
+        const activeRoomOverlap = db.prepare(`
+          SELECT id, start_time, end_time, booking_date FROM bookings 
+          WHERE room_id = ? 
+            AND status IN ('active', 'upcoming')
+            AND booking_date = ?
+            AND (start_time < ? AND end_time > ?)
+        `).get(roomId, singleDate, endTime, startTime) as { id: string; start_time: string; end_time: string } | undefined;
+
+        if (activeRoomOverlap) {
+          return res.status(409).json({ 
+            error: `Room ${roomId} is already reserved on ${singleDate} between ${activeRoomOverlap.start_time} and ${activeRoomOverlap.end_time}.`,
+            conflictDate: singleDate,
+            conflictType: 'room_occupied'
+          });
+        }
+      }
+    }
+
+    const desk: any = deskId ? db.prepare('SELECT * FROM desks WHERE id = ?').get(deskId) : null;
+    const room: any = roomId ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId) : null;
+
+    // Calculate duration hours for pricing
+    const [sH, sM] = startTime.split(':').map(Number);
+    const [eH, eM] = endTime.split(':').map(Number);
+    const durationHours = Math.max(1, ((eH * 60 + eM) - (sH * 60 + sM)) / 60);
+    const costPerDay = desk ? (desk.price_per_hour || 15) * durationHours : 80;
+
+    // Process Invited Attendees / Team Members
+    const attendeesList: Array<{ id: string; name: string; email: string; avatar?: string; role?: string }> = [];
+    if (Array.isArray(attendeeIds) && attendeeIds.length > 0) {
+      for (const aId of attendeeIds) {
+        if (aId === assignedUserId) continue;
+        const attUser: any = db.prepare('SELECT id, name, email, avatar, role FROM users WHERE id = ?').get(aId);
+        if (attUser) {
+          attendeesList.push({
+            id: attUser.id,
+            name: attUser.name,
+            email: attUser.email,
+            avatar: attUser.avatar,
+            role: attUser.role
+          });
+        }
+      }
+    }
+    const attendeesJson = JSON.stringify(attendeesList);
+
+    // Retrieve recipient user profile for Outlook email dispatch
+    const recipientUser: any = targetEmployee || db.prepare('SELECT id, name, email, department, role FROM users WHERE id = ?').get(assignedUserId) || {
+      id: assignedUserId,
+      name: effectiveName,
+      email: callerUser.email,
+      department: (callerUser as any).department || 'General'
+    };
+
+    const createdBookings: any[] = [];
+    const baseTimestamp = Date.now();
+
+    // Insert booking record for each verified date
+    for (let i = 0; i < requestedDates.length; i++) {
+      const currentBookingDate = requestedDates[i];
+      const bookingId = `BKG-${baseTimestamp.toString().slice(-4)}${requestedDates.length > 1 ? `-${i + 1}` : ''}`;
+
+      // Microsoft Teams Integration: Auto-generate Teams Meeting URL for rooms
+      const teamsMeetingUrl = roomId && includeTeams !== false
+        ? `https://teams.microsoft.com/l/meetup-join/19%3ameeting_${bookingId}%40thread.v2/0?context=%7b%22Tid%22%3a%22smartdesk-tenant-2026%22%2c%22Oid%22%3a%22${assignedUserId}%22%7d`
+        : null;
+
+      // 1. Insert Booking Record
+      db.prepare(`
+        INSERT INTO bookings (id, user_id, desk_id, room_id, area_id, desk_code, pod_name, booking_date, duration, start_time, end_time, status, check_in_status, cost, teams_meeting_url, attendees)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, ?)
+      `).run(
+        bookingId,
+        assignedUserId,
+        deskId || null,
+        roomId || null,
+        areaId,
+        desk ? desk.code : (room ? room.code : (deskId || 'DESK')),
+        desk ? desk.pod_name : (room ? room.name : (deskId || 'Workstation')),
+        currentBookingDate,
+        duration || `${durationHours}h (${startTime} - ${endTime})`,
+        startTime,
+        endTime,
+        costPerDay,
+        teamsMeetingUrl,
+        attendeesJson
+      );
+
+      // 2. Insert Invited Attendees into booking_attendees junction table
+      const insertAttendeeStmt = db.prepare(`
+        INSERT OR REPLACE INTO booking_attendees (id, booking_id, user_id, user_name, user_email, role)
+        VALUES (?, ?, ?, ?, ?, 'attendee')
+      `);
+      for (const attUser of attendeesList) {
+        const attRecordId = `ATT-${bookingId}-${attUser.id}`;
+        try {
+          insertAttendeeStmt.run(attRecordId, bookingId, attUser.id, attUser.name, attUser.email);
+        } catch (attErr) {
+          console.warn(`[BOOKING ATTENDEE] Error inserting attendee ${attUser.id}:`, attErr);
+        }
+      }
+
+      // 3. Audit log
+      const auditDetails = targetEmployee
+        ? `${callerRole.toUpperCase()} ${callerUser.name} allocated seat ${deskId || roomId} to employee ${targetEmployee.name} (${targetEmployee.department}) for ${currentBookingDate} (${startTime}-${endTime})`
+        : `Employee ${callerUser.name} reserved seat ${deskId || roomId} for ${currentBookingDate} (${startTime}-${endTime})`;
+
+      db.prepare(`
+        INSERT INTO system_logs (event_type, user_id, details)
+        VALUES ('SEAT_ALLOCATION', ?, ?)
+      `).run(callerUser.id, auditDetails);
+
+      // 4. Dispatch Microsoft Outlook confirmation email with .ics Calendar Invite & Teams Link
+      let emailNotification: any = null;
+      try {
+        emailNotification = await sendOutlookBookingNotification({
+          bookingId,
+          type: roomId ? 'room_booking' : 'seat_booking',
+          user: {
+            id: recipientUser.id,
+            name: recipientUser.name,
+            email: recipientUser.email,
+            department: recipientUser.department
+          },
+          resource: {
+            isRoom: Boolean(roomId),
+            name: desk ? desk.pod_name : (room ? room.name : (deskId || 'Workstation')),
+            code: desk ? desk.code : (room ? room.code : (deskId || 'DESK')),
+            areaId,
+            capacity: room ? room.capacity : undefined,
+            amenities: room
+              ? (typeof room.amenities === 'string' ? JSON.parse(room.amenities || '[]') : room.amenities)
+              : (desk && desk.amenities ? (typeof desk.amenities === 'string' ? JSON.parse(desk.amenities || '[]') : desk.amenities) : undefined)
+          },
+          schedule: {
+            date: currentBookingDate,
+            startTime,
+            endTime,
+            duration: duration || `${durationHours}h (${startTime} - ${endTime})`
+          },
+          booker: isCallerAdminOrManager && targetUserId && targetUserId !== callerUser.id
+            ? { id: callerUser.id, name: callerUser.name, role: callerRole }
+            : undefined,
+          teamsMeetingUrl,
+          attendees: attendeesList
+        });
+      } catch (err) {
+        console.warn('[OUTLOOK EMAIL] Dispatch failure:', err);
+      }
+
+      createdBookings.push({
+        id: bookingId,
+        userId: assignedUserId,
+        deskId,
+        roomId,
+        areaId,
+        deskCode: desk ? desk.code : (room ? room.code : (deskId || 'DESK')),
+        podName: desk ? desk.pod_name : (room ? room.name : (deskId || 'Workstation')),
+        date: currentBookingDate,
+        duration: duration || `${durationHours}h (${startTime} - ${endTime})`,
+        startTime,
+        endTime,
+        status: 'active',
+        userName: effectiveName,
+        userRole: effectiveRole,
+        userAvatar: effectiveAvatar,
+        checkInStatus: true,
+        cost: costPerDay,
+        teamsMeetingUrl,
+        attendees: attendeesList,
+        isOrganizer: true,
+        emailNotification
+      });
+    }
+
+    if (createdBookings.length === 1) {
+      res.status(201).json({
+        ...createdBookings[0],
+        bookings: createdBookings
+      });
+    } else {
+      res.status(201).json({
+        ...createdBookings[0],
+        isMultiDay: true,
+        count: createdBookings.length,
+        bookings: createdBookings,
+        totalCost: costPerDay * createdBookings.length
+      });
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -735,33 +967,46 @@ app.post('/api/bookings', authenticateToken, (req: AuthRequest, res) => {
 app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
   expirePastBookings();
   try {
+    const currentUserId = req.user!.id;
     const bookings = db.prepare(`
-      SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role
+      SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role,
+             CASE WHEN b.user_id = ? THEN 1 ELSE 0 END as is_organizer
       FROM bookings b
       JOIN users u ON b.user_id = u.id
-      WHERE b.user_id = ?
+      WHERE (b.user_id = ? OR b.id IN (SELECT booking_id FROM booking_attendees WHERE user_id = ?))
+        AND b.status != 'cancelled'
       ORDER BY b.booking_date DESC, b.start_time DESC
-    `).all(req.user!.id);
+    `).all(currentUserId, currentUserId, currentUserId);
 
-    const formatted = bookings.map((b: any) => ({
-      id: b.id,
-      userId: b.user_id,
-      deskId: b.desk_id,
-      roomId: b.room_id,
-      areaId: b.area_id,
-      deskCode: b.desk_code,
-      podName: b.pod_name,
-      date: b.booking_date,
-      duration: b.duration,
-      startTime: b.start_time,
-      endTime: b.end_time,
-      status: b.status,
-      userName: b.user_name,
-      userRole: b.user_role,
-      userAvatar: b.user_avatar,
-      checkInStatus: Boolean(b.check_in_status),
-      cost: b.cost
-    }));
+    const formatted = bookings.map((b: any) => {
+      let attendees = [];
+      try {
+        attendees = typeof b.attendees === 'string' ? JSON.parse(b.attendees) : (b.attendees || []);
+      } catch {}
+
+      return {
+        id: b.id,
+        userId: b.user_id,
+        deskId: b.desk_id,
+        roomId: b.room_id,
+        areaId: b.area_id,
+        deskCode: b.desk_code,
+        podName: b.pod_name,
+        date: b.booking_date,
+        duration: b.duration,
+        startTime: b.start_time,
+        endTime: b.end_time,
+        status: b.status,
+        userName: b.user_name,
+        userRole: b.user_role,
+        userAvatar: b.user_avatar,
+        checkInStatus: Boolean(b.check_in_status),
+        cost: b.cost,
+        teamsMeetingUrl: b.teams_meeting_url,
+        attendees,
+        isOrganizer: Boolean(b.is_organizer)
+      };
+    });
 
     res.json(formatted);
   } catch (error: any) {
@@ -780,26 +1025,35 @@ app.get('/api/bookings/all', (req: Request, res: Response) => {
       ORDER BY b.booking_date DESC, b.start_time DESC
     `).all();
 
-    res.json(bookings.map((b: any) => ({
-      id: b.id,
-      userId: b.user_id,
-      deskId: b.desk_id,
-      roomId: b.room_id,
-      areaId: b.area_id,
-      deskCode: b.desk_code,
-      podName: b.pod_name,
-      date: b.booking_date,
-      duration: b.duration,
-      startTime: b.start_time,
-      endTime: b.end_time,
-      status: b.status,
-      userName: b.user_name,
-      userRole: b.user_role,
-      userAvatar: b.user_avatar,
-      department: b.department,
-      checkInStatus: Boolean(b.check_in_status),
-      cost: b.cost
-    })));
+    res.json(bookings.map((b: any) => {
+      let attendees = [];
+      try {
+        attendees = typeof b.attendees === 'string' ? JSON.parse(b.attendees) : (b.attendees || []);
+      } catch {}
+
+      return {
+        id: b.id,
+        userId: b.user_id,
+        deskId: b.desk_id,
+        roomId: b.room_id,
+        areaId: b.area_id,
+        deskCode: b.desk_code,
+        podName: b.pod_name,
+        date: b.booking_date,
+        duration: b.duration,
+        startTime: b.start_time,
+        endTime: b.end_time,
+        status: b.status,
+        userName: b.user_name,
+        userRole: b.user_role,
+        userAvatar: b.user_avatar,
+        department: b.department,
+        checkInStatus: Boolean(b.check_in_status),
+        cost: b.cost,
+        teamsMeetingUrl: b.teams_meeting_url,
+        attendees
+      };
+    }));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -950,6 +1204,141 @@ app.post('/api/desks/:id/release', authenticateToken, (req: AuthRequest, res) =>
 });
 
 // ========================================================
+// MICROSOFT OUTLOOK EMAIL NOTIFICATIONS & CALENDAR SYNC
+// ========================================================
+
+// Get recent Outlook emails for current user (or all if manager/admin)
+app.get('/api/notifications/emails', authenticateToken, (req: AuthRequest, res) => {
+  try {
+    const user = req.user!;
+    let emails: any[];
+    if (user.role === 'admin' || user.role === 'manager') {
+      emails = db.prepare(`
+        SELECT id, booking_id, recipient_email, recipient_name, subject, type, status, provider, sent_at
+        FROM email_notifications
+        ORDER BY sent_at DESC
+        LIMIT 60
+      `).all();
+    } else {
+      emails = db.prepare(`
+        SELECT id, booking_id, recipient_email, recipient_name, subject, type, status, provider, sent_at
+        FROM email_notifications
+        WHERE recipient_email = ?
+        ORDER BY sent_at DESC
+        LIMIT 40
+      `).all(user.email.toLowerCase());
+    }
+    res.json(emails);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// View specific Outlook email with full HTML preview
+app.get('/api/notifications/emails/:id', authenticateToken, (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const emailRecord: any = db.prepare('SELECT * FROM email_notifications WHERE id = ?').get(id);
+    if (!emailRecord) {
+      return res.status(404).json({ error: 'Email notification not found' });
+    }
+    res.json(emailRecord);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Download standard iCalendar (.ics) invite for Microsoft Outlook
+app.get('/api/bookings/:id/calendar.ics', (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking: any = db.prepare('SELECT * FROM bookings WHERE id = ?').get(id);
+    if (!booking) {
+      return res.status(404).send('Booking not found');
+    }
+
+    const emailNotif: any = db.prepare('SELECT ics_content FROM email_notifications WHERE booking_id = ? ORDER BY sent_at DESC LIMIT 1').get(id);
+    if (emailNotif && emailNotif.ics_content) {
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="smartdesk-outlook-${id}.ics"`);
+      return res.send(emailNotif.ics_content);
+    }
+
+    const user: any = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(booking.user_id) || {
+      id: booking.user_id,
+      name: 'Valued Employee',
+      email: 'employee@company.internal'
+    };
+
+    const desk: any = booking.desk_id ? db.prepare('SELECT * FROM desks WHERE id = ?').get(booking.desk_id) : null;
+    const room: any = booking.room_id ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(booking.room_id) : null;
+
+    const ics = generateIcsCalendar({
+      bookingId: booking.id,
+      type: room ? 'room_booking' : 'seat_booking',
+      user,
+      resource: {
+        isRoom: Boolean(room),
+        name: desk ? desk.pod_name : (room ? room.name : booking.pod_name),
+        code: booking.desk_code,
+        areaId: booking.area_id,
+        capacity: room ? room.capacity : undefined
+      },
+      schedule: {
+        date: booking.booking_date,
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        duration: booking.duration
+      }
+    });
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="smartdesk-outlook-${id}.ics"`);
+    res.send(ics);
+  } catch (err: any) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Re-send Outlook booking email
+app.post('/api/bookings/:id/resend-email', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const booking: any = db.prepare('SELECT * FROM bookings WHERE id = ?').get(id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const user: any = db.prepare('SELECT id, name, email, department FROM users WHERE id = ?').get(booking.user_id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const desk: any = booking.desk_id ? db.prepare('SELECT * FROM desks WHERE id = ?').get(booking.desk_id) : null;
+    const room: any = booking.room_id ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(booking.room_id) : null;
+
+    const result = await sendOutlookBookingNotification({
+      bookingId: booking.id,
+      type: room ? 'room_booking' : 'seat_booking',
+      user,
+      resource: {
+        isRoom: Boolean(room),
+        name: desk ? desk.pod_name : (room ? room.name : booking.pod_name),
+        code: booking.desk_code,
+        areaId: booking.area_id,
+        capacity: room ? room.capacity : undefined
+      },
+      schedule: {
+        date: booking.booking_date,
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        duration: booking.duration
+      }
+    });
+
+    res.json({ success: true, message: `Outlook notification sent to ${user.email}`, notification: result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========================================================
 // 4. ADMIN USER MANAGEMENT & DIRECTORY
 // ========================================================
 app.get('/api/admin/users', authenticateToken, (req: AuthRequest, res) => {
@@ -1027,6 +1416,139 @@ app.get('/api/analytics', authenticateToken, (req: AuthRequest, res) => {
       occupancyRate: Math.round((occupiedDesks.count / totalDesks.count) * 100),
       timestamp: new Date().toISOString()
     });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manager Workplace Reports Summary
+app.get('/api/reports/summary', (req: Request, res: Response) => {
+  try {
+    expirePastBookings();
+
+    const totalDesks = (db.prepare('SELECT COUNT(*) as count FROM desks').get() as any).count;
+    const occupiedDesks = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active'").get() as any).count;
+    const checkedInCount = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active' AND check_in_status = 1").get() as any).count;
+    const pendingCheckInCount = occupiedDesks - checkedInCount;
+
+    const totalUsers = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
+    const activeEmployees = (db.prepare("SELECT COUNT(*) as count FROM users WHERE active = 1 AND role = 'user'").get() as any).count;
+
+    // Department breakdown
+    const deptRows: any[] = db.prepare(`
+      SELECT 
+        u.department,
+        COUNT(DISTINCT u.id) as total_employees,
+        COUNT(DISTINCT CASE WHEN b.status = 'active' THEN b.id END) as active_bookings
+      FROM users u
+      LEFT JOIN bookings b ON u.id = b.user_id AND b.status = 'active'
+      GROUP BY u.department
+    `).all();
+
+    const departments = deptRows.map((r) => ({
+      department: r.department,
+      totalEmployees: r.total_employees,
+      activeBookings: r.active_bookings,
+      allocationRatePct: Math.round((r.active_bookings / (r.total_employees || 1)) * 100),
+      primaryZone: r.department.includes('Engineering') ? 'Zone B // North Pods'
+        : r.department.includes('Design') ? 'Zone C // Central Modular'
+        : r.department.includes('Data') ? 'Zone D // Executive Pods'
+        : 'Zone A // West Bank'
+    }));
+
+    res.json({
+      totalDesks,
+      occupiedDesks,
+      availableDesks: totalDesks - occupiedDesks,
+      overallOccupancyRate: Math.round((occupiedDesks / (totalDesks || 1)) * 100),
+      checkedInCount,
+      pendingCheckInCount,
+      checkInRatePct: occupiedDesks > 0 ? Math.round((checkedInCount / occupiedDesks) * 100) : 0,
+      totalEmployees: totalUsers,
+      activeEmployees,
+      departments,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// CSV Export Endpoint (Server-Side Direct Download)
+app.get('/api/reports/export/:reportType', (req: Request, res: Response) => {
+  const { reportType } = req.params;
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    expirePastBookings();
+
+    if (reportType === 'attendance') {
+      const rows: any[] = db.prepare(`
+        SELECT b.id, b.desk_id, b.area_id, b.desk_code, b.pod_name, b.booking_date, b.start_time, b.end_time, b.check_in_status,
+               u.name as employee_name, u.email as employee_email, u.department, u.role
+        FROM bookings b
+        JOIN users u ON b.user_id = u.id
+        WHERE b.status = 'active'
+        ORDER BY b.booking_date DESC, b.start_time ASC
+      `).all();
+
+      const csvLines = [
+        'Booking ID,Date,Area,Desk ID,Seat Code,Pod / Zone,Employee Name,Email,Department,Role,Shift Hours,Check-In Status',
+        ...rows.map((r) =>
+          `"${r.id}","${r.booking_date}","${r.area_id}","${r.desk_id}","${r.desk_code}","${r.pod_name}","${r.employee_name}","${r.employee_email}","${r.department}","${r.role}","${r.start_time}-${r.end_time}","${r.check_in_status ? 'Checked In' : 'Pending'}"`
+        )
+      ];
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="smartdesk_attendance_${today}.csv"`);
+      return res.send('\uFEFF' + csvLines.join('\r\n'));
+    }
+
+    if (reportType === 'departments') {
+      const rows: any[] = db.prepare(`
+        SELECT u.department,
+               COUNT(DISTINCT u.id) as total_employees,
+               COUNT(DISTINCT CASE WHEN b.status = 'active' THEN b.id END) as active_bookings
+        FROM users u
+        LEFT JOIN bookings b ON u.id = b.user_id AND b.status = 'active'
+        GROUP BY u.department
+      `).all();
+
+      const csvLines = [
+        'Department,Total Employees,Allocated Desks Count,Allocation Rate %,Report Date',
+        ...rows.map((r) => {
+          const rate = Math.round((r.active_bookings / (r.total_employees || 1)) * 100);
+          return `"${r.department}",${r.total_employees},${r.active_bookings},"${rate}%","${today}"`;
+        })
+      ];
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="smartdesk_department_allocations_${today}.csv"`);
+      return res.send('\uFEFF' + csvLines.join('\r\n'));
+    }
+
+    if (reportType === 'utilization') {
+      const rows: any[] = db.prepare(`
+        SELECT b.id, b.desk_id, b.area_id, b.desk_code, b.pod_name, b.booking_date, b.duration, b.start_time, b.end_time, b.status, b.check_in_status,
+               u.name as employee_name, u.email as employee_email, u.department
+        FROM bookings b
+        JOIN users u ON b.user_id = u.id
+        ORDER BY b.booking_date DESC, b.start_time DESC
+      `).all();
+
+      const csvLines = [
+        'Booking ID,Employee Name,Email,Department,Desk ID,Seat Code,Pod,Area,Date,Shift,Duration,Status,Check-In',
+        ...rows.map((r) =>
+          `"${r.id}","${r.employee_name}","${r.employee_email}","${r.department}","${r.desk_id}","${r.desk_code}","${r.pod_name}","${r.area_id}","${r.booking_date}","${r.start_time}-${r.end_time}","${r.duration}","${r.status}","${r.check_in_status ? 'Yes' : 'No'}"`
+        )
+      ];
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="smartdesk_utilization_log_${today}.csv"`);
+      return res.send('\uFEFF' + csvLines.join('\r\n'));
+    }
+
+    return res.status(400).json({ error: 'Unknown report type. Supported: attendance, departments, utilization' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

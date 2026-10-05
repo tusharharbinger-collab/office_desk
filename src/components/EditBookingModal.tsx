@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Booking, Desk } from '../types';
-import { getTodayISODate, getTomorrowISODate, formatDisplayDate } from '../utils/dateTime';
+import { getTodayISODate, getTomorrowISODate, formatDisplayDate, calculateDurationHours, formatDurationLabel } from '../utils/dateTime';
 
 interface EditBookingModalProps {
   booking: Booking | null;
@@ -30,23 +30,6 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
   });
   const [startTime, setStartTime] = useState(booking.startTime || '09:00');
   const [endTime, setEndTime] = useState(booking.endTime || '17:00');
-
-  const handleDurationChange = (newDuration: string) => {
-    setDuration(newDuration);
-    if (newDuration.includes('Morning')) {
-      setStartTime('09:00');
-      setEndTime('13:00');
-    } else if (newDuration.includes('Afternoon')) {
-      setStartTime('13:00');
-      setEndTime('17:00');
-    } else if (newDuration.includes('Evening')) {
-      setStartTime('17:00');
-      setEndTime('21:00');
-    } else {
-      setStartTime('09:00');
-      setEndTime('17:00');
-    }
-  };
 
   const handleConfirm = () => {
     const matchedDesk = availableDesks.find((d) => d.id === selectedDeskId);
@@ -129,27 +112,57 @@ export const EditBookingModal: React.FC<EditBookingModalProps> = ({
             />
           </div>
 
-          {/* Duration Selector */}
-          <div>
-            <label className="text-xs font-medium text-on-surface-variant block mb-1.5">
-              Shift Duration & Time Range
-            </label>
-            <select
-              value={duration}
-              onChange={(e) => handleDurationChange(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-            >
-              <option value="Full Day (8h)">Full Day (8h • 09:00 - 17:00)</option>
-              <option value="Morning (4h)">Morning (4h • 09:00 - 13:00)</option>
-              <option value="Afternoon (4h)">Afternoon (4h • 13:00 - 17:00)</option>
-              <option value="Evening (4h)">Evening (4h • 17:00 - 21:00)</option>
-            </select>
-          </div>
+          {/* Manual Time In and Time Out */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-on-surface-variant flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm text-primary">schedule</span>
+                <span>Select Time In & Time Out</span>
+              </label>
+              <span className="text-[11px] font-bold text-primary font-mono bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg">
+                {calculateDurationHours(startTime, endTime)} hrs
+              </span>
+            </div>
 
-          {/* Time range preview */}
-          <div className="p-2.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 flex items-center justify-between text-xs">
-            <span className="text-outline">Active Time Window:</span>
-            <span className="font-mono text-secondary font-semibold">{startTime} - {endTime}</span>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-outline uppercase font-mono mb-1 flex items-center gap-0.5">
+                  <span className="material-symbols-outlined text-xs text-emerald-400">login</span>
+                  <span>Time In</span>
+                </span>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    if (newStart) {
+                      setStartTime(newStart);
+                      setDuration(formatDurationLabel(newStart, endTime));
+                    }
+                  }}
+                  className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary font-mono cursor-pointer"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <span className="text-[10px] text-outline uppercase font-mono mb-1 flex items-center gap-0.5">
+                  <span className="material-symbols-outlined text-xs text-rose-400">logout</span>
+                  <span>Time Out</span>
+                </span>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => {
+                    const newEnd = e.target.value;
+                    if (newEnd) {
+                      setEndTime(newEnd);
+                      setDuration(formatDurationLabel(startTime, newEnd));
+                    }
+                  }}
+                  className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary font-mono cursor-pointer"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Seat Switcher */}

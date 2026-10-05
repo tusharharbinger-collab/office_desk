@@ -1,4 +1,4 @@
-import { Desk, Room, Booking, UserProfile, Role } from '../types';
+import { Desk, Room, Booking, UserProfile, Role, EmailNotification } from '../types';
 
 const BASE_URL = '/api';
 
@@ -59,7 +59,6 @@ export const api = {
     name: string;
     email: string;
     password: string;
-    department: string;
     role?: Role;
   }): Promise<{ token: string; user: UserProfile }> {
     const res = await fetch(`${BASE_URL}/auth/register`, {
@@ -144,14 +143,46 @@ export const api = {
     return res.json();
   },
 
-  async getRooms(areaId: 'area-1' | 'area-2', date?: string, startTime?: string, endTime?: string): Promise<Room[]> {
-    const params = new URLSearchParams({ areaId });
+  async getRooms(areaId?: string, date?: string, startTime?: string, endTime?: string): Promise<Room[]> {
+    const params = new URLSearchParams();
+    if (areaId && areaId !== 'all') params.append('areaId', areaId);
     if (date) params.append('date', date);
     if (startTime) params.append('startTime', startTime);
     if (endTime) params.append('endTime', endTime);
     const res = await fetch(`${BASE_URL}/rooms?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch rooms from database');
     return res.json();
+  },
+
+  async createRoom(data: {
+    name: string;
+    code: string;
+    areaId: 'area-1' | 'area-2';
+    capacity: number;
+    amenities: string[];
+  }): Promise<Room> {
+    const res = await fetch(`${BASE_URL}/rooms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Failed to create meeting room');
+    return result;
+  },
+
+  async deleteRoom(roomId: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/rooms/${roomId}`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    if (!res.ok) {
+      const result = await res.json();
+      throw new Error(result.error || 'Failed to delete meeting room');
+    }
   },
 
   // Users Directory (for employee allocation)
@@ -170,12 +201,16 @@ export const api = {
     areaId: string;
     duration: string;
     bookingDate?: string;
+    bookingDates?: string[];
+    dates?: string[];
     startTime?: string;
     endTime?: string;
     targetUserId?: string;
     callerUserId?: string;
     callerRole?: string;
-  }): Promise<Booking> {
+    attendeeIds?: string[];
+    includeTeams?: boolean;
+  }): Promise<Booking & { bookings?: Booking[]; isMultiDay?: boolean; count?: number; totalCost?: number }> {
     const callerId = booking.callerUserId || localStorage.getItem('smartdesk_user_id');
     const callerRole = booking.callerRole || localStorage.getItem('smartdesk_user_role');
     const res = await fetch(`${BASE_URL}/bookings`, {
@@ -283,5 +318,47 @@ export const api = {
       headers: getAuthHeader()
     });
     if (!res.ok) throw new Error('Failed to delete user');
+  },
+
+  // Workplace Reports
+  async getReportSummary(): Promise<any> {
+    const res = await fetch(`${BASE_URL}/reports/summary`, {
+      headers: getAuthHeader()
+    });
+    if (!res.ok) throw new Error('Failed to fetch reports summary');
+    return res.json();
+  },
+
+  // Microsoft Outlook Email Notifications & Calendar
+  async getEmailNotifications(): Promise<EmailNotification[]> {
+    const res = await fetch(`${BASE_URL}/notifications/emails`, {
+      headers: getAuthHeader()
+    });
+    if (!res.ok) throw new Error('Failed to fetch Outlook email notifications');
+    return res.json();
+  },
+
+  async getEmailNotification(id: string): Promise<EmailNotification> {
+    const res = await fetch(`${BASE_URL}/notifications/emails/${id}`, {
+      headers: getAuthHeader()
+    });
+    if (!res.ok) throw new Error('Failed to fetch email details');
+    return res.json();
+  },
+
+  getCalendarIcsUrl(bookingId: string): string {
+    return `${BASE_URL}/bookings/${bookingId}/calendar.ics`;
+  },
+
+  async resendOutlookEmail(bookingId: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`${BASE_URL}/bookings/${bookingId}/resend-email`, {
+      method: 'POST',
+      headers: getAuthHeader()
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to resend email');
+    }
+    return res.json();
   }
 };

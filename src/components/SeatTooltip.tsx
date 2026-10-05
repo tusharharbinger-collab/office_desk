@@ -7,7 +7,7 @@ interface SeatTooltipProps {
   position: { x: number; y: number };
 }
 
-export const SeatTooltip: React.FC<SeatTooltipProps> = ({ desk, position }) => {
+export const SeatTooltip: React.FC<SeatTooltipProps> = React.memo(({ desk, position }) => {
   if (!desk) return null;
 
   let badgeColor = "bg-secondary/15 text-secondary border-secondary/30";
@@ -26,10 +26,11 @@ export const SeatTooltip: React.FC<SeatTooltipProps> = ({ desk, position }) => {
 
   return (
     <div
-      className="fixed pointer-events-none z-50 bg-surface-container-high/95 backdrop-blur-xl border border-outline-variant/40 p-3.5 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] w-72 transition-all duration-75 text-on-surface"
+      className="fixed pointer-events-none z-50 bg-surface-container-high/95 backdrop-blur-xl border border-outline-variant/40 p-3.5 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] w-72 text-on-surface will-change-transform"
       style={{
-        left: `${position.x + 16}px`,
-        top: `${position.y + 16}px`,
+        transform: `translate3d(${position.x + 16}px, ${position.y + 16}px, 0)`,
+        top: 0,
+        left: 0
       }}
     >
       <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-outline-variant/30">
@@ -84,7 +85,7 @@ export const SeatTooltip: React.FC<SeatTooltipProps> = ({ desk, position }) => {
                   {desk.occupant.name}
                 </p>
                 <p className="text-[10px] text-primary truncate">
-                  {desk.occupant.department} • {desk.occupant.role}
+                  {desk.occupant.role}
                 </p>
               </div>
             </div>
@@ -99,4 +100,4 @@ export const SeatTooltip: React.FC<SeatTooltipProps> = ({ desk, position }) => {
       </div>
     </div>
   );
-};
+});

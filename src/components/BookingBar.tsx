@@ -1,6 +1,6 @@
 import React from 'react';
 import { Desk, UserProfile, Booking } from '../types';
-import { formatDisplayDate } from '../utils/dateTime';
+import { formatDisplayDate, calculateDurationHours, formatDurationLabel } from '../utils/dateTime';
 import { Avatar } from './Avatar';
 
 interface BookingBarProps {
@@ -8,9 +8,12 @@ interface BookingBarProps {
   selectedDuration: string;
   onDurationChange: (duration: string) => void;
   selectedDate: string;
+  onDateChange?: (date: string) => void;
   startTime: string;
   endTime: string;
+  onTimeChange?: (startTime: string, endTime: string) => void;
   onShiftSelect?: (slotId: string, start: string, end: string, duration: string) => void;
+  onOpenScheduleModal: () => void;
   onConfirm: () => void;
   onClearSelection: () => void;
   currentUser: UserProfile;
@@ -25,9 +28,12 @@ export const BookingBar: React.FC<BookingBarProps> = ({
   selectedDuration,
   onDurationChange,
   selectedDate,
+  onDateChange,
   startTime,
   endTime,
+  onTimeChange,
   onShiftSelect,
+  onOpenScheduleModal,
   onConfirm,
   onClearSelection,
   currentUser,
@@ -73,21 +79,6 @@ export const BookingBar: React.FC<BookingBarProps> = ({
     }
   }, [isAdminOrManager, selectedTargetUser, eligibleEmployees, onSelectTargetUser, selectedDate]);
 
-  const handleDurationSelect = (val: string) => {
-    onDurationChange(val);
-    if (onShiftSelect) {
-      if (val.includes('Morning')) {
-        onShiftSelect('morning', '09:00', '13:00', val);
-      } else if (val.includes('Afternoon')) {
-        onShiftSelect('afternoon', '13:00', '17:00', val);
-      } else if (val.includes('Evening')) {
-        onShiftSelect('evening', '17:00', '21:00', val);
-      } else {
-        onShiftSelect('full-day', '09:00', '17:00', val);
-      }
-    }
-  };
-
   return (
     <div
       className="fixed bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-50 w-[96%] sm:w-[94%] max-w-5xl max-h-[85vh] overflow-y-auto bg-surface-container-high/95 backdrop-blur-2xl border-2 border-primary/50 rounded-2xl px-3 sm:px-5 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.7)] animate-in fade-in slide-in-from-bottom-5 duration-200"
@@ -113,11 +104,25 @@ export const BookingBar: React.FC<BookingBarProps> = ({
               </span>
             )}
 
-            {/* Date & Time pill */}
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 rounded font-mono">
-              <span className="material-symbols-outlined text-xs">schedule</span>
-              {formatDisplayDate(selectedDate)} ({startTime} - {endTime})
-            </span>
+            {/* Interactive Date Picker & Time Badge */}
+            <div className="flex items-center gap-1.5">
+              <label className="hidden sm:inline-flex items-center gap-1 text-[11px] bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-400/30 px-2 py-0.5 rounded-lg font-mono cursor-pointer transition-colors" title="Change reservation date">
+                <span className="material-symbols-outlined text-xs text-sky-400">calendar_month</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value && onDateChange) onDateChange(e.target.value);
+                  }}
+                  className="bg-transparent text-sky-200 border-none outline-none font-mono text-[11px] cursor-pointer"
+                />
+              </label>
+
+              <span className="hidden md:inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 rounded-lg font-mono">
+                <span className="material-symbols-outlined text-xs">schedule</span>
+                {startTime}–{endTime}
+              </span>
+            </div>
           </div>
           <p className="text-[11px] text-on-surface-variant truncate max-w-[260px]">
             {selectedDesk.podName} • {selectedDesk.amenities.join(', ')}
@@ -140,7 +145,7 @@ export const BookingBar: React.FC<BookingBarProps> = ({
       )}
 
       {/* Target User & Duration Selection */}
-      <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+      <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
         {/* If Admin or Manager: Employee Assignment Dropdown (Cannot book for themselves) */}
         {isAdminOrManager ? (
           <div className="flex items-center gap-2">
@@ -167,7 +172,7 @@ export const BookingBar: React.FC<BookingBarProps> = ({
                       disabled={Boolean(booked)}
                       className={booked ? 'text-outline/50 bg-surface-container-low' : ''}
                     >
-                      {emp.name} ({emp.department}){booked ? ` — Booked (${booked.deskCode || booked.deskId})` : ''}
+                      {emp.name}{booked ? ` — Booked (${booked.deskCode || booked.deskId})` : ''}
                     </option>
                   );
                 })}
@@ -187,8 +192,8 @@ export const BookingBar: React.FC<BookingBarProps> = ({
                   <span className="text-[11px] font-semibold text-on-surface leading-tight truncate max-w-[100px]">
                     {selectedTargetUser.name}
                   </span>
-                  <span className="text-[9px] text-secondary font-mono">
-                    {selectedTargetUser.department}
+                  <span className="text-[9px] text-secondary font-mono uppercase">
+                    {selectedTargetUser.role}
                   </span>
                 </div>
               </div>
@@ -214,20 +219,70 @@ export const BookingBar: React.FC<BookingBarProps> = ({
           </div>
         )}
 
-        {/* Shift Duration Selector */}
-        <div className="flex flex-col text-right">
-          <span className="text-[10px] text-outline">Shift Duration</span>
-          <select
-            value={selectedDuration}
-            onChange={(e) => handleDurationSelect(e.target.value)}
-            className="bg-surface-container border border-outline-variant/40 rounded-lg px-2.5 py-1 text-xs text-on-surface focus:outline-none focus:border-primary cursor-pointer font-medium"
-          >
-            <option value="Full Day (8h)">Full Day (8h • 09:00 - 17:00)</option>
-            <option value="Morning (4h)">Morning (4h • 09:00 - 13:00)</option>
-            <option value="Afternoon (4h)">Afternoon (4h • 13:00 - 17:00)</option>
-            <option value="Evening (4h)">Evening (4h • 17:00 - 21:00)</option>
-          </select>
+        {/* Manual Time In and Time Out Selection */}
+        <div className="flex items-center gap-2">
+          {/* Time In */}
+          <div className="flex flex-col text-left">
+            <label className="text-[10px] text-outline font-medium flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-xs text-sky-400">login</span>
+              <span>Time In</span>
+            </label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => {
+                const newStart = e.target.value;
+                if (newStart) {
+                  onTimeChange?.(newStart, endTime);
+                  onDurationChange?.(formatDurationLabel(newStart, endTime));
+                }
+              }}
+              className="bg-surface-container border border-outline-variant/40 rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary font-mono cursor-pointer"
+            />
+          </div>
+
+          {/* Time Out */}
+          <div className="flex flex-col text-left">
+            <label className="text-[10px] text-outline font-medium flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-xs text-sky-400">logout</span>
+              <span>Time Out</span>
+            </label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => {
+                const newEnd = e.target.value;
+                if (newEnd) {
+                  onTimeChange?.(startTime, newEnd);
+                  onDurationChange?.(formatDurationLabel(startTime, newEnd));
+                }
+              }}
+              className="bg-surface-container border border-outline-variant/40 rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary font-mono cursor-pointer"
+            />
+          </div>
+
+          {/* Duration Hours Pill */}
+          <div className="hidden sm:flex flex-col text-center justify-end pb-0.5">
+            <span className="text-[9px] text-outline uppercase font-mono">Hours</span>
+            <span className="text-[11px] font-bold text-sky-400 font-mono bg-sky-500/10 border border-sky-400/30 px-2 py-0.5 rounded-lg whitespace-nowrap">
+              {calculateDurationHours(startTime, endTime)}h
+            </span>
+          </div>
         </div>
+
+        {/* Multi-Day & Custom Schedule Button */}
+        <button
+          type="button"
+          onClick={onOpenScheduleModal}
+          className="px-3 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/40 text-sky-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm flex-shrink-0 group"
+          title="Open advanced scheduler to book multiple days or custom hours"
+        >
+          <span className="material-symbols-outlined text-[16px] text-sky-400 group-hover:scale-110 transition-transform">
+            date_range
+          </span>
+          <span className="hidden sm:inline">Multi-Day Booking</span>
+          <span className="sm:hidden">Multi-Day</span>
+        </button>
 
         {/* Confirm Reservation CTA Button */}
         <button

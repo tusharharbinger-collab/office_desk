@@ -6,7 +6,7 @@ A modern, full-stack hybrid workplace office desk reservation and floor plan all
 
 - **Interactive Floor Plan Blueprints**: High-fidelity architectural floor layout for Work Area 1 (130 desks) and Work Area 2 (80 desks) with pod grouping, meeting rooms, executive boardrooms, and live status dots.
 - **Dynamic Date & Time Allocation**: Bookings are reserved for exact dates and time slots (Full Day, Morning, Afternoon, Evening, or Custom hours) with automatic de-allocation when reservation windows expire.
-- **Real-Time Live Presence & Radar**: Interactive occupancy visualization and live telemetry.
+- **Real-Time Live Presence**: Interactive occupancy visualization and live telemetry.
 - **Role-Based Access Control**:
   - **Employee**: Book available desks, check into assigned seats, view active & upcoming passes, cancel bookings.
   - **Manager**: Team seating allocation, department-level booking, live occupancy tracking.

@@ -4,17 +4,15 @@ import { Desk } from '../types';
 interface DeskNodeProps {
   desk: Desk;
   isSelected: boolean;
-  showPresence: boolean;
   onSelect: (desk: Desk) => void;
   onHover: (desk: Desk, e: React.MouseEvent) => void;
   onLeave: () => void;
   isHighlighted?: boolean;
 }
 
-export const DeskNode: React.FC<DeskNodeProps> = ({
+export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
   desk,
   isSelected,
-  showPresence,
   onSelect,
   onHover,
   onLeave,
@@ -22,13 +20,8 @@ export const DeskNode: React.FC<DeskNodeProps> = ({
 }) => {
   const isBooked = desk.status === 'booked';
   const isHold = desk.status === 'hold';
-  const isAvailable = desk.status === 'available';
 
   // Orientation determines where chair is rendered relative to desk
-  // 'facing-right' -> Person sits on left, faces right towards desk/divider
-  // 'facing-left'  -> Person sits on right, faces left towards desk/divider
-  // 'facing-up'    -> Person sits below, faces up towards desk/divider
-  // 'facing-down'  -> Person sits above, faces down towards desk/divider
   const isFacingRight = desk.orientation === 'facing-right';
   const isFacingLeft = desk.orientation === 'facing-left';
 
@@ -57,18 +50,17 @@ export const DeskNode: React.FC<DeskNodeProps> = ({
 
   return (
     <div
-      className={`relative group flex items-center justify-center cursor-pointer select-none transition-all duration-150 ${
+      className={`relative group flex items-center justify-center cursor-pointer select-none transition-transform duration-100 ${
         isFacingRight ? 'flex-row' : isFacingLeft ? 'flex-row-reverse' : 'flex-col'
       }`}
       onClick={() => onSelect(desk)}
       onMouseEnter={(e) => onHover(desk, e)}
-      onMouseMove={(e) => onHover(desk, e)}
       onMouseLeave={onLeave}
       data-desk-id={desk.id}
     >
       {/* Front-and-Back Chair Graphic */}
       <div
-        className={`transition-all duration-150 rounded-sm flex items-center justify-center ${
+        className={`transition-colors duration-100 rounded-sm flex items-center justify-center ${
           isFacingRight
             ? 'w-2.5 h-6 -mr-1 z-10'
             : isFacingLeft
@@ -97,7 +89,7 @@ export const DeskNode: React.FC<DeskNodeProps> = ({
 
       {/* Desk Workstation Table Top */}
       <div
-        className={`w-11 h-11 rounded-lg border flex flex-col items-center justify-center relative shadow-sm group-hover:scale-105 transition-all ${containerStyle}`}
+        className={`w-11 h-11 rounded-lg border flex flex-col items-center justify-center relative shadow-sm group-hover:scale-105 transition-transform duration-100 ${containerStyle}`}
       >
         {/* Desk Divider/Screen indicator at edge facing opposite of chair */}
         <div
@@ -130,18 +122,7 @@ export const DeskNode: React.FC<DeskNodeProps> = ({
           )}
         </div>
 
-        {/* Manager Live Presence Badge */}
-        {showPresence && desk.occupant && (
-          <div
-            className="absolute -top-3.5 -left-3.5 w-7 h-7 rounded-full border-2 border-primary bg-cover bg-center shadow-lg z-30 animate-in fade-in zoom-in duration-200"
-            style={{ backgroundImage: `url(${desk.occupant.avatar})` }}
-          >
-            <span className="absolute -bottom-1 -right-1 bg-primary text-on-primary text-[8px] px-1 rounded-full font-bold">
-              {desk.occupant.hoursRemaining}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );
-};
+});

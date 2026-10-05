@@ -77,8 +77,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             className="flex items-center gap-3 cursor-pointer group select-none"
             title="SmartDesk - Return to top"
           >
-            <div className="w-10 h-10 rounded-xl sm:rounded-full bg-gradient-to-tr from-primary via-sky-400 to-secondary flex items-center justify-center text-slate-950 font-bold shadow-[0_0_16px_rgba(14,165,233,0.4)] group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-xl">desk</span>
+            <div className="h-10 px-2.5 rounded-xl bg-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform flex-shrink-0 border border-white/20">
+              <img src="/harbinger-logo.webp" alt="Harbinger Group" className="h-6 w-auto object-contain" />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-extrabold tracking-tight text-white">SmartDesk</span>
@@ -448,7 +448,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <h3 className="text-lg font-bold text-white">Live Teammate Presence</h3>
                 <p className="text-xs sm:text-sm text-slate-300 mt-2.5 leading-relaxed">
-                  Never wonder if your team is in. See live seat badges showing which department and
+                  Never wonder if your team is in. See live seat badges showing which
                   colleagues are on-site so you can schedule in-person brainstorms effortlessly.
                 </p>
               </div>
@@ -666,8 +666,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* STREAMLINED FOOTER */}
       <footer className="py-12 px-6 sm:px-12 lg:px-16 border-t border-white/5 bg-[#070a0f] text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined text-lg">desk</span>
+          <div className="h-8 px-2 rounded-lg bg-white flex items-center justify-center shadow-sm border border-white/10">
+            <img src="/harbinger-logo.webp" alt="Harbinger Group" className="h-5 w-auto object-contain" />
           </div>
           <div>
             <span className="text-white font-semibold">SmartDesk</span>

@@ -6,7 +6,6 @@ export const INITIAL_USERS: UserProfile[] = [
     name: 'Alex Mercer',
     email: 'admin@smartdesk.com',
     role: 'admin',
-    department: 'DevOps & Infrastructure',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
     active: true
   },
@@ -15,7 +14,6 @@ export const INITIAL_USERS: UserProfile[] = [
     name: 'Sarah Jenkins',
     email: 'manager@smartdesk.com',
     role: 'manager',
-    department: 'Frontend Engineering',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80',
     active: true
   },
@@ -24,53 +22,7 @@ export const INITIAL_USERS: UserProfile[] = [
     name: 'David Chen',
     email: 'employee@smartdesk.com',
     role: 'user',
-    department: 'Product Design',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80',
-    active: true
-  },
-  {
-    id: 'usr-elena',
-    name: 'Elena Rostova',
-    email: 'elena@smartdesk.com',
-    role: 'user',
-    department: 'Data Science',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80',
-    active: true
-  },
-  {
-    id: 'usr-5',
-    name: 'Marcus Brody',
-    email: 'marcus.brody@company.com',
-    role: 'manager',
-    department: 'Backend Platform',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80',
-    active: true
-  },
-  {
-    id: 'usr-6',
-    name: 'Priya Sharma',
-    email: 'priya.sharma@company.com',
-    role: 'user',
-    department: 'QA & Automation',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80',
-    active: true
-  },
-  {
-    id: 'usr-7',
-    name: 'James Wilson',
-    email: 'james.wilson@company.com',
-    role: 'user',
-    department: 'Security & Compliance',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&h=120&q=80',
-    active: true
-  },
-  {
-    id: 'usr-8',
-    name: 'Aisha Patel',
-    email: 'aisha.patel@company.com',
-    role: 'user',
-    department: 'Growth Marketing',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80',
     active: true
   }
 ];
@@ -86,30 +38,24 @@ export const INITIAL_SYSTEM_HEALTH: SystemHealthMetric = {
 
 // Seed occupants for realistic Manager Live View
 const SAMPLE_OCCUPANTS = [
-  { name: 'Sarah Jenkins', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80', department: 'Engineering', role: 'Staff Engineer', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
-  { name: 'David Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80', department: 'Design', role: 'Lead Designer', bookedTime: '09:00 - 17:00', hoursRemaining: '2h' },
-  { name: 'Elena Rostova', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80', department: 'Data Science', role: 'Senior ML Engineer', bookedTime: '10:00 - 19:00', hoursRemaining: '4h' },
-  { name: 'Marcus Brody', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80', department: 'Backend', role: 'Engineering Lead', bookedTime: '08:30 - 17:30', hoursRemaining: '2.5h' },
-  { name: 'Priya Sharma', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80', department: 'QA', role: 'Automation Eng', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
-  { name: 'James Wilson', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&h=120&q=80', department: 'Security', role: 'InfoSec Analyst', bookedTime: '10:00 - 18:00', hoursRemaining: '3.5h' },
-  { name: 'Aisha Patel', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80', department: 'Marketing', role: 'Product Marketing', bookedTime: '09:30 - 17:30', hoursRemaining: '3h' },
-  { name: 'Kenji Sato', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&h=120&q=80', department: 'Engineering', role: 'Fullstack Dev', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
-  { name: 'Chloe Dubois', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80', department: 'Product', role: 'Product Manager', bookedTime: '08:00 - 16:30', hoursRemaining: '1h' },
-  { name: 'Liam O’Connor', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&h=120&q=80', department: 'Sales', role: 'Account Exec', bookedTime: '11:00 - 19:00', hoursRemaining: '5h' },
-  { name: 'Zoe Morales', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&h=120&q=80', department: 'Operations', role: 'Operations Mgr', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
-  { name: 'Devon Vance', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&h=120&q=80', department: 'Executive', role: 'VP Operations', bookedTime: '08:00 - 18:00', hoursRemaining: '4h' }
+  { name: 'Sarah Jenkins', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80', role: 'Staff Engineer', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
+  { name: 'David Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80', role: 'Lead Designer', bookedTime: '09:00 - 17:00', hoursRemaining: '2h' },
+  { name: 'Elena Rostova', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80', role: 'Senior ML Engineer', bookedTime: '10:00 - 19:00', hoursRemaining: '4h' },
+  { name: 'Marcus Brody', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80', role: 'Engineering Lead', bookedTime: '08:30 - 17:30', hoursRemaining: '2.5h' },
+  { name: 'Priya Sharma', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80', role: 'Automation Eng', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
+  { name: 'James Wilson', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&h=120&q=80', role: 'InfoSec Analyst', bookedTime: '10:00 - 18:00', hoursRemaining: '3.5h' },
+  { name: 'Aisha Patel', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80', role: 'Product Marketing', bookedTime: '09:30 - 17:30', hoursRemaining: '3h' },
+  { name: 'Kenji Sato', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&h=120&q=80', role: 'Fullstack Dev', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
+  { name: 'Chloe Dubois', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80', role: 'Product Manager', bookedTime: '08:00 - 16:30', hoursRemaining: '1h' },
+  { name: 'Liam O’Connor', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&h=120&q=80', role: 'Account Exec', bookedTime: '11:00 - 19:00', hoursRemaining: '5h' },
+  { name: 'Zoe Morales', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&h=120&q=80', role: 'Operations Mgr', bookedTime: '09:00 - 18:00', hoursRemaining: '3h' },
+  { name: 'Devon Vance', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&h=120&q=80', role: 'VP Operations', bookedTime: '08:00 - 18:00', hoursRemaining: '4h' }
 ];
 
 // Helper to construct Work Area 1 Desks (Exactly 130 seats matching Media (6).jpg)
 export function generateWorkArea1Desks(): Desk[] {
   const desks: Desk[] = [];
-  let occupantIdx = 0;
-
-  const nextOccupant = () => {
-    const occ = SAMPLE_OCCUPANTS[occupantIdx % SAMPLE_OCCUPANTS.length];
-    occupantIdx++;
-    return occ;
-  };
+  const nextOccupant = () => undefined;
 
   // 1. Left Perimeter Wall: 14 Desks (Facing Right inward)
   // Top segment: 3 desks
@@ -124,7 +70,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row: i,
       col: 1,
       orientation: 'facing-right',
-      status: isBooked ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Window View', 'Dual 4K Monitor', 'Power Outlet'],
       occupant: isBooked ? nextOccupant() : undefined,
       pricePerHour: 15
@@ -143,7 +89,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row: i,
       col: 1,
       orientation: 'facing-right',
-      status: isBooked ? 'booked' : (i === 6 ? 'hold' : 'available'),
+      status: 'available',
       amenities: ['Window View', 'Single Ultrawide', 'USB-C Dock'],
       occupant: isBooked ? nextOccupant() : undefined,
       pricePerHour: 15
@@ -162,7 +108,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row: i,
       col: 1,
       orientation: 'facing-right',
-      status: isBooked ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Window View', 'Ergonomic Chair', 'Power Outlet'],
       occupant: isBooked ? nextOccupant() : undefined,
       pricePerHour: 15
@@ -184,7 +130,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual 4K Monitor', 'Standing Desk', 'Type-C 100W Hub'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 18
@@ -202,7 +148,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual 4K Monitor', 'Standing Desk', 'Type-C 100W Hub'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 18
@@ -222,7 +168,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : (leftNum === 15 ? 'hold' : 'available'),
+      status: 'available',
       amenities: ['Dual 4K Monitor', 'Ergonomic Seating'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 18
@@ -239,7 +185,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual 4K Monitor', 'Ergonomic Seating'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 18
@@ -260,7 +206,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual Monitor', 'Power Outlet', 'Silent Zone'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -277,7 +223,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : (row === 4 ? 'hold' : 'available'),
+      status: 'available',
       amenities: ['Dual Monitor', 'Power Outlet', 'Silent Zone'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -297,7 +243,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual Monitor', 'Power Outlet'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -314,7 +260,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual Monitor', 'Power Outlet'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -334,7 +280,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual Monitor', 'Standing Desk'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -351,7 +297,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual Monitor', 'Standing Desk'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -387,7 +333,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBooked ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual 4K Monitor', 'Ergonomic Chair'],
       occupant: isBooked ? nextOccupant() : undefined,
       pricePerHour: 17
@@ -407,7 +353,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row: row + 2,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual 4K Monitor', 'Ergonomic Chair'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 17
@@ -424,7 +370,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row: row + 2,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Dual 4K Monitor', 'Ergonomic Chair'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 17
@@ -445,7 +391,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Ultra-wide Display', 'Standing Desk'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -462,7 +408,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Ultra-wide Display', 'Standing Desk'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -482,7 +428,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 1,
       orientation: 'facing-right',
-      status: isBookedLeft ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Ultra-wide Display', 'Standing Desk'],
       occupant: isBookedLeft ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -499,7 +445,7 @@ export function generateWorkArea1Desks(): Desk[] {
       row,
       col: 2,
       orientation: 'facing-left',
-      status: isBookedRight ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Ultra-wide Display', 'Standing Desk'],
       occupant: isBookedRight ? nextOccupant() : undefined,
       pricePerHour: 16
@@ -512,13 +458,7 @@ export function generateWorkArea1Desks(): Desk[] {
 // Helper to construct Work Area 2 Desks (Exactly 80 seats matching Media (5).jpg)
 export function generateWorkArea2Desks(): Desk[] {
   const desks: Desk[] = [];
-  let occupantIdx = 4;
-
-  const nextOccupant = () => {
-    const occ = SAMPLE_OCCUPANTS[occupantIdx % SAMPLE_OCCUPANTS.length];
-    occupantIdx++;
-    return occ;
-  };
+  const nextOccupant = () => undefined;
 
   // 1. Left Wall: 5 Desks (Facing Right inward)
   for (let i = 1; i <= 5; i++) {
@@ -532,7 +472,7 @@ export function generateWorkArea2Desks(): Desk[] {
       row: i,
       col: 1,
       orientation: 'facing-right',
-      status: isBooked ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Single Ultrawide', 'Standard Desk', 'Window View'],
       occupant: isBooked ? nextOccupant() : undefined,
       pricePerHour: 14
@@ -554,7 +494,7 @@ export function generateWorkArea2Desks(): Desk[] {
         row,
         col: 1,
         orientation: 'facing-right',
-        status: isBookedLeft ? 'booked' : 'available',
+        status: 'available',
         amenities: ['Dual 4K Monitor', 'Standing Desk', 'Type-C Hub'],
         occupant: isBookedLeft ? nextOccupant() : undefined,
         pricePerHour: 16
@@ -572,7 +512,7 @@ export function generateWorkArea2Desks(): Desk[] {
         row,
         col: 2,
         orientation: 'facing-left',
-        status: isBookedRight ? 'booked' : ((podIdx === 3 && row === 2) ? 'hold' : 'available'),
+        status: 'available',
         amenities: ['Dual 4K Monitor', 'Standing Desk', 'Type-C Hub'],
         occupant: isBookedRight ? nextOccupant() : undefined,
         pricePerHour: 16
@@ -592,7 +532,7 @@ export function generateWorkArea2Desks(): Desk[] {
       row: i,
       col: 1,
       orientation: 'facing-left',
-      status: isBooked ? 'booked' : 'available',
+      status: 'available',
       amenities: ['Single Ultrawide', 'Standard Desk', 'Window View'],
       occupant: isBooked ? nextOccupant() : undefined,
       pricePerHour: 14
@@ -602,158 +542,9 @@ export function generateWorkArea2Desks(): Desk[] {
   return desks;
 }
 
-export const WORK_AREA_1_ROOMS: Room[] = [
-  {
-    id: 'WA1-CONF-01',
-    code: 'CONF-1',
-    name: 'Executive Boardroom',
-    areaId: 'area-1',
-    capacity: 14,
-    status: 'occupied',
-    amenities: ['4K Video Conferencing', '85" Digital Whiteboard', 'Polycom Mic Array'],
-    occupant: {
-      name: 'Leadership Team',
-      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&h=120&q=80',
-      department: 'Executive',
-      role: 'Quarterly Review',
-      bookedTime: '10:00 - 16:00',
-      hoursRemaining: '2.5h'
-    }
-  },
-  {
-    id: 'WA1-EXEC-01',
-    code: 'EXEC-1',
-    name: 'Executive Office Suite',
-    areaId: 'area-1',
-    capacity: 4,
-    status: 'available',
-    amenities: ['Private Office', 'Herman Miller Seating', 'Direct Sunlight']
-  }
-];
+export const WORK_AREA_1_ROOMS: Room[] = [];
 
-export const WORK_AREA_2_ROOMS: Room[] = [
-  {
-    id: 'WA2-RM-06',
-    code: 'ROOM-6',
-    name: 'Room 6 (Team Focus)',
-    areaId: 'area-2',
-    capacity: 4,
-    status: 'available',
-    amenities: ['Acoustic Insulation', '4K Display', 'Conference Phone']
-  },
-  {
-    id: 'WA2-RM-05',
-    code: 'ROOM-5',
-    name: 'Room 5 (1-on-1 Cabin)',
-    areaId: 'area-2',
-    capacity: 2,
-    status: 'occupied',
-    amenities: ['Glass Privacy Frosting', 'Ergonomic Chairs'],
-    occupant: {
-      name: 'Priya & Sarah',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80',
-      department: 'Engineering',
-      role: 'Sprint 1-on-1',
-      bookedTime: '11:00 - 13:00',
-      hoursRemaining: '45m'
-    }
-  },
-  {
-    id: 'WA2-RM-04',
-    code: 'ROOM-4',
-    name: 'Room 4 (Design Sprint)',
-    areaId: 'area-2',
-    capacity: 6,
-    status: 'available',
-    amenities: ['Digital Whiteboard', 'Standing Table']
-  },
-  {
-    id: 'WA2-RM-03',
-    code: 'ROOM-3',
-    name: 'Room 3 (Interview Cabin)',
-    areaId: 'area-2',
-    capacity: 3,
-    status: 'available',
-    amenities: ['Webcam Bar', 'Soundproof Door']
-  },
-  {
-    id: 'WA2-RM-02',
-    code: 'ROOM-2',
-    name: 'Room 2 (Strategy Room)',
-    areaId: 'area-2',
-    capacity: 6,
-    status: 'available',
-    amenities: ['Dual 65" Displays', 'Presentation Clicker']
-  },
-  {
-    id: 'WA2-RM-01',
-    code: 'ROOM-1',
-    name: 'Room 1 (Director Cabin)',
-    areaId: 'area-2',
-    capacity: 4,
-    status: 'occupied',
-    amenities: ['Private Balcony Access', 'Lounge Chairs'],
-    occupant: {
-      name: 'Alex Mercer',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
-      department: 'Infrastructure',
-      role: 'Director',
-      bookedTime: '08:30 - 18:30',
-      hoursRemaining: '4.5h'
-    }
-  }
-];
+export const WORK_AREA_2_ROOMS: Room[] = [];
 
-export const INITIAL_BOOKINGS: Booking[] = [
-  {
-    id: 'BKG-1001',
-    deskId: 'WA1-NP1-04',
-    areaId: 'area-1',
-    deskCode: 'N4',
-    podName: 'North Pod 1 (East Side)',
-    date: 'Today, Oct 24',
-    duration: 'Full Day (8h)',
-    startTime: '09:00',
-    endTime: '17:00',
-    status: 'active',
-    userName: 'David Chen',
-    userRole: 'user',
-    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80',
-    checkInStatus: true,
-    cost: 144
-  },
-  {
-    id: 'BKG-1002',
-    deskId: 'WA1-SP1-07',
-    areaId: 'area-1',
-    deskCode: 'S1-7',
-    podName: 'South Pod Alpha (West Side)',
-    date: 'Today, Oct 24',
-    duration: 'Morning (4h)',
-    startTime: '09:00',
-    endTime: '13:00',
-    status: 'active',
-    userName: 'Elena Rostova',
-    userRole: 'user',
-    userAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80',
-    checkInStatus: true,
-    cost: 64
-  },
-  {
-    id: 'BKG-1003',
-    deskId: 'WA2-P3-05',
-    areaId: 'area-2',
-    deskCode: 'P3-5',
-    podName: 'Pod 3 (West Side)',
-    date: 'Tomorrow, Oct 25',
-    duration: 'Full Day (8h)',
-    startTime: '09:00',
-    endTime: '17:00',
-    status: 'upcoming',
-    userName: 'Alex Mercer',
-    userRole: 'admin',
-    userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
-    checkInStatus: false,
-    cost: 128
-  }
-];
+export const INITIAL_BOOKINGS: Booking[] = [];
+

@@ -87,7 +87,7 @@ export const Minimap: React.FC<MinimapProps> = ({ areaId, pan, scale }) => {
           title="Show Minimap"
         >
           <span className="material-symbols-outlined text-base text-primary">map</span>
-          <span className="text-[11px] font-mono text-outline">Radar</span>
+          <span className="text-[11px] font-mono text-outline">Map</span>
         </button>
       )}
     </div>

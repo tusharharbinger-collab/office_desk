@@ -7,7 +7,6 @@ export type DeskOrientation = 'facing-left' | 'facing-right' | 'facing-up' | 'fa
 export interface Occupant {
   name: string;
   avatar: string;
-  department: string;
   role: string;
   bookedTime: string;
   hoursRemaining: string;
@@ -43,6 +42,7 @@ export interface Booking {
   id: string;
   userId?: string;
   deskId: string;
+  roomId?: string;
   areaId: 'area-1' | 'area-2';
   deskCode: string;
   podName: string;
@@ -56,6 +56,15 @@ export interface Booking {
   userAvatar: string;
   checkInStatus: boolean;
   cost: number;
+  teamsMeetingUrl?: string;
+  attendees?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+    role?: string;
+  }>;
+  isOrganizer?: boolean;
 }
 
 export interface UserProfile {
@@ -63,9 +72,9 @@ export interface UserProfile {
   name: string;
   email: string;
   role: Role;
-  department: string;
   avatar: string;
   active: boolean;
+  department?: string;
 }
 
 export interface SystemHealthMetric {
@@ -75,4 +84,18 @@ export interface SystemHealthMetric {
   dbPoolHealth: number; // percentage
   redisLockActive: number;
   uptime: string;
+}
+
+export interface EmailNotification {
+  id: string;
+  booking_id: string;
+  recipient_email: string;
+  recipient_name: string;
+  subject: string;
+  type: 'seat_booking' | 'room_booking' | 'booking_cancellation';
+  status: 'sent' | 'failed' | 'queued';
+  provider: string;
+  html_content?: string;
+  ics_content?: string;
+  sent_at: string;
 }

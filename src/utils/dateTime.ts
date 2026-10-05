@@ -97,3 +97,107 @@ export function formatDisplayDate(isoDate: string): string {
 export function formatTimeRange(startTime: string, endTime: string): string {
   return `${startTime} - ${endTime}`;
 }
+
+export function addDaysToDate(isoDate: string, days: number): string {
+  const parts = isoDate.split('-').map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  d.setDate(d.getDate() + days);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function isWeekend(isoDate: string): boolean {
+  const parts = isoDate.split('-').map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  const day = d.getDay();
+  return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
+}
+
+export function getWeekdayShort(isoDate: string): string {
+  const parts = isoDate.split('-').map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  return d.toLocaleDateString('en-US', { weekday: 'short' });
+}
+
+export function generateDateRange(startDate: string, endDate: string, excludeWeekends: boolean = false): string[] {
+  if (!startDate || !endDate) return [startDate || getTodayISODate()];
+  if (startDate > endDate) {
+    const temp = startDate;
+    startDate = endDate;
+    endDate = temp;
+  }
+
+  const result: string[] = [];
+  let curr = startDate;
+  let safetyLimit = 60; // Max 60 days to prevent excessive loops
+
+  while (curr <= endDate && safetyLimit-- > 0) {
+    if (!excludeWeekends || !isWeekend(curr)) {
+      result.push(curr);
+    }
+    curr = addDaysToDate(curr, 1);
+  }
+
+  return result.length > 0 ? result : [startDate];
+}
+
+export function getNextWorkdays(startDate: string, count: number = 3): string[] {
+  const result: string[] = [];
+  let curr = startDate || getTodayISODate();
+  let safety = 30;
+
+  while (result.length < count && safety-- > 0) {
+    if (!isWeekend(curr)) {
+      result.push(curr);
+    }
+    curr = addDaysToDate(curr, 1);
+  }
+
+  return result;
+}
+
+export function getWorkweekDates(startDate?: string): string[] {
+  const base = startDate || getTodayISODate();
+  const parts = base.split('-').map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  const currentDay = d.getDay(); // 0 is Sun, 1 is Mon, 5 is Fri, 6 is Sat
+
+  // Find Monday of this week (or next Monday if weekend)
+  let diffToMonday = 1 - currentDay;
+  if (currentDay === 0) diffToMonday = 1; // if Sun, next Mon
+  if (currentDay === 6) diffToMonday = 2; // if Sat, next Mon
+
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diffToMonday);
+
+  const dates: string[] = [];
+  for (let i = 0; i < 5; i++) {
+    const w = new Date(mon);
+    w.setDate(mon.getDate() + i);
+    const yr = w.getFullYear();
+    const mo = String(w.getMonth() + 1).padStart(2, '0');
+    const da = String(w.getDate()).padStart(2, '0');
+    dates.push(`${yr}-${mo}-${da}`);
+  }
+  return dates;
+}
+
+export function calculateDurationHours(startTime: string, endTime: string): number {
+  try {
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+    return Math.max(0.5, Math.round((diffMinutes / 60) * 10) / 10);
+  } catch {
+    return 8;
+  }
+}
+
+export function formatDurationLabel(startTime: string, endTime: string): string {
+  const hours = calculateDurationHours(startTime, endTime);
+  return `${hours}h (${startTime} - ${endTime})`;
+}
+
+

@@ -22,7 +22,6 @@ export const SignUpModal: React.FC<SignUpModalProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [department, setDepartment] = useState('Frontend Engineering');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +36,6 @@ export const SignUpModal: React.FC<SignUpModalProps> = ({
         name,
         email,
         password,
-        department,
         role: 'user'
       });
       onSuccess(data.user);
@@ -135,23 +133,6 @@ export const SignUpModal: React.FC<SignUpModalProps> = ({
             />
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-on-surface-variant block mb-1">
-              Department
-            </label>
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-3.5 py-2.5 text-xs text-on-surface focus:outline-none focus:border-primary"
-            >
-              <option value="Frontend Engineering">Frontend Engineering</option>
-              <option value="Backend Platform">Backend Platform</option>
-              <option value="Product Design">Product Design</option>
-              <option value="Data Science & ML">Data Science & ML</option>
-              <option value="QA & Security">QA & Security</option>
-              <option value="Growth & Operations">Growth & Operations</option>
-            </select>
-          </div>
 
           <div>
             <label className="text-xs font-medium text-on-surface-variant block mb-1">

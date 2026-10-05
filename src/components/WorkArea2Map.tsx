@@ -1,70 +1,113 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Desk, Room } from '../types';
 import { DeskNode } from './DeskNode';
 
 interface WorkArea2MapProps {
   desks: Desk[];
-  rooms: Room[];
+  rooms?: Room[];
   selectedDesk: Desk | null;
-  showPresence: boolean;
   highlightedDeskId: string | null;
   onSelectDesk: (desk: Desk) => void;
   onHoverDesk: (desk: Desk, e: React.MouseEvent) => void;
   onLeaveDesk: () => void;
-  onSelectRoom: (room: Room) => void;
+  onSelectRoom?: (room: Room) => void;
 }
 
-export const WorkArea2Map: React.FC<WorkArea2MapProps> = ({
+export const WorkArea2Map: React.FC<WorkArea2MapProps> = React.memo(({
   desks,
-  rooms,
   selectedDesk,
-  showPresence,
   highlightedDeskId,
   onSelectDesk,
   onHoverDesk,
-  onLeaveDesk,
-  onSelectRoom
+  onLeaveDesk
 }) => {
-  const getDesk = (id: string) => desks.find((d) => d.id === id);
+  // Memoized desk map for O(1) lookup
+  const deskMap = useMemo(() => new Map(desks.map((d) => [d.id, d])), [desks]);
+  const getDesk = (id: string) => deskMap.get(id);
 
   return (
-    <div className="relative w-[1680px] h-[920px] bg-surface-container-lowest/80 border-2 border-outline-variant/40 rounded-3xl p-8 shadow-2xl">
-      {/* Blueprint Architectural Stamp */}
-      <div className="flex items-center justify-between mb-3 text-outline/70 font-mono text-xs select-none px-2">
-        <div className="flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-primary text-base">architecture</span>
-          <span className="font-semibold text-on-surface tracking-wider">WA-2 // OFFICE WORK ROOM 2</span>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-surface-container-high border border-outline-variant/30 text-secondary">
-            80 WORKSTATIONS • 7 PODS • 6 CABINS
+    <div className="relative w-[1380px] h-[620px] bg-[#090D16] border border-slate-700/50 rounded-3xl p-6 shadow-2xl overflow-hidden select-none">
+      {/* High-tech Blueprint Grid Background */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-40"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0),
+            linear-gradient(to right, rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(56, 189, 248, 0.03) 1px, transparent 1px)
+          `,
+          backgroundSize: '24px 24px, 120px 120px, 120px 120px'
+        }}
+      />
+
+      {/* Precision CAD Corner Crosshairs */}
+      <div className="absolute top-3 left-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">┌ ┐</div>
+      <div className="absolute top-3 right-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">┌ ┐</div>
+      <div className="absolute bottom-3 left-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">└ ┘</div>
+      <div className="absolute bottom-3 right-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">└ ┘</div>
+
+      {/* Blueprint Architectural Stamp Header */}
+      <div className="absolute top-4 left-6 flex items-center gap-3 select-none z-10">
+        <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm shadow-cyan-500/10">
+          <span className="material-symbols-outlined text-lg">domain</span>
+        </div>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-white text-xs tracking-wider">WA-2 // OFFICE WORK ROOM 2</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+              80 WORKSTATIONS
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-slate-400 border border-white/[0.08]">
+              7 PODS • 2 WALL BANKS
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5">
+            ARCHITECTURAL BLUEPRINT // OPEN PLAN WORKSPACE
           </span>
         </div>
       </div>
 
+      {/* Blueprint Scale & Coordinate HUD */}
+      <div className="absolute top-4 right-6 flex items-center gap-2.5 text-slate-400 font-mono text-[11px] select-none z-10">
+        <div className="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur border border-slate-700/60 px-3 py-1 rounded-xl shadow-sm">
+          <span className="material-symbols-outlined text-xs text-cyan-400">straighten</span>
+          <span>1380 × 620 MM</span>
+        </div>
+        <div className="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur border border-slate-700/60 px-3 py-1 rounded-xl shadow-sm">
+          <span className="material-symbols-outlined text-xs text-amber-400">explore</span>
+          <span>NORTH ↑</span>
+        </div>
+      </div>
+
       {/* Main Floor Workspace Container */}
-      <div className="relative w-full h-[580px] border-2 border-outline-variant/40 rounded-2xl p-6 bg-surface-container-lowest/40 flex items-center justify-between">
+      <div className="absolute top-[70px] left-6 right-6 bottom-6 border border-slate-700/40 rounded-2xl p-4 bg-[#0e1526]/40 backdrop-blur-sm flex items-center justify-between shadow-inner">
         {/* ========================================================
             1. LEFT PERIMETER WALL (5 Desks Facing Right)
            ======================================================== */}
-        <div className="flex flex-col justify-around h-full border-r-2 border-outline-variant/40 pr-5">
-          <span className="text-[10px] font-mono text-outline uppercase text-center mb-1">
-            Left Wall (5)
-          </span>
-          {[1, 2, 3, 4, 5].map((i) => {
-            const desk = getDesk(`WA2-LW-${String(i).padStart(2, '0')}`);
-            if (!desk) return null;
-            return (
-              <DeskNode
-                key={desk.id}
-                desk={desk}
-                isSelected={selectedDesk?.id === desk.id}
-                showPresence={showPresence}
-                isHighlighted={highlightedDeskId === desk.id}
-                onSelect={onSelectDesk}
-                onHover={onHoverDesk}
-                onLeave={onLeaveDesk}
-              />
-            );
-          })}
+        <div className="flex flex-col justify-center items-center h-full border-r border-slate-700/60 pr-4">
+          <div className="flex items-center gap-1.5 mb-2 px-1.5 py-0.5 rounded bg-white/[0.03] border border-white/[0.06] w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80" />
+            <span className="text-[10px] font-mono text-slate-300 uppercase tracking-wider font-semibold">Left Wall</span>
+            <span className="text-[9px] font-mono text-slate-400 bg-slate-800 px-1 rounded">5</span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {[1, 2, 3, 4, 5].map((i) => {
+              const desk = getDesk(`WA2-LW-${String(i).padStart(2, '0')}`);
+              if (!desk) return null;
+              return (
+                <DeskNode
+                  key={desk.id}
+                  desk={desk}
+                  isSelected={selectedDesk?.id === desk.id}
+                  isHighlighted={highlightedDeskId === desk.id}
+                  onSelect={onSelectDesk}
+                  onHover={onHoverDesk}
+                  onLeave={onLeaveDesk}
+                />
+              );
+            })}
+          </div>
         </div>
 
         {/* ========================================================
@@ -73,19 +116,21 @@ export const WorkArea2Map: React.FC<WorkArea2MapProps> = ({
         {[1, 2, 3, 4, 5, 6, 7].map((podIdx) => (
           <div
             key={podIdx}
-            className="flex flex-col items-center bg-surface-container-low/50 border border-outline-variant/30 rounded-2xl p-3 h-full justify-around"
+            className="flex flex-col items-center bg-[#0e1526]/70 backdrop-blur-md border border-slate-700/50 hover:border-cyan-500/40 transition-colors duration-200 rounded-2xl p-3 h-full justify-center shadow-lg shadow-black/20 group"
           >
-            <span className="text-[10px] font-mono text-outline uppercase font-semibold">
-              Pod {podIdx} (10)
-            </span>
+            <div className="flex items-center gap-1.5 mb-2 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06]">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80" />
+              <span className="text-[10px] font-mono text-slate-300 uppercase tracking-wide font-medium">Pod {podIdx}</span>
+              <span className="text-[9px] font-mono text-slate-500 bg-slate-800/80 px-1 rounded">10</span>
+            </div>
 
             {/* Pod Rows with central vertical spine divider */}
-            <div className="flex gap-1 relative h-full py-2">
+            <div className="flex gap-1 relative py-1">
               {/* Divider partition line */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-1 bg-outline-variant/60 rounded-full z-10" />
+              <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-slate-700 via-slate-600 to-slate-700 rounded-full z-10" />
 
               {/* Left Column of Pod (Facing Right) */}
-              <div className="flex flex-col justify-around pr-2">
+              <div className="flex flex-col gap-1.5 pr-2">
                 {[1, 3, 5, 7, 9].map((num) => {
                   const desk = getDesk(`WA2-P${podIdx}-${String(num).padStart(2, '0')}`);
                   if (!desk) return null;
@@ -94,7 +139,6 @@ export const WorkArea2Map: React.FC<WorkArea2MapProps> = ({
                       key={desk.id}
                       desk={desk}
                       isSelected={selectedDesk?.id === desk.id}
-                      showPresence={showPresence}
                       isHighlighted={highlightedDeskId === desk.id}
                       onSelect={onSelectDesk}
                       onHover={onHoverDesk}
@@ -105,7 +149,7 @@ export const WorkArea2Map: React.FC<WorkArea2MapProps> = ({
               </div>
 
               {/* Right Column of Pod (Facing Left - Front and Back across Divider!) */}
-              <div className="flex flex-col justify-around pl-2">
+              <div className="flex flex-col gap-1.5 pl-2">
                 {[2, 4, 6, 8, 10].map((num) => {
                   const desk = getDesk(`WA2-P${podIdx}-${String(num).padStart(2, '0')}`);
                   if (!desk) return null;
@@ -114,7 +158,6 @@ export const WorkArea2Map: React.FC<WorkArea2MapProps> = ({
                       key={desk.id}
                       desk={desk}
                       isSelected={selectedDesk?.id === desk.id}
-                      showPresence={showPresence}
                       isHighlighted={highlightedDeskId === desk.id}
                       onSelect={onSelectDesk}
                       onHover={onHoverDesk}
@@ -130,132 +173,31 @@ export const WorkArea2Map: React.FC<WorkArea2MapProps> = ({
         {/* ========================================================
             3. RIGHT PERIMETER WALL (5 Desks Facing Left)
            ======================================================== */}
-        <div className="flex flex-col justify-around h-full border-l-2 border-outline-variant/40 pl-5">
-          <span className="text-[10px] font-mono text-outline uppercase text-center mb-1">
-            Right Wall (5)
-          </span>
-          {[1, 2, 3, 4, 5].map((i) => {
-            const desk = getDesk(`WA2-RW-${String(i).padStart(2, '0')}`);
-            if (!desk) return null;
-            return (
-              <DeskNode
-                key={desk.id}
-                desk={desk}
-                isSelected={selectedDesk?.id === desk.id}
-                showPresence={showPresence}
-                isHighlighted={highlightedDeskId === desk.id}
-                onSelect={onSelectDesk}
-                onHover={onHoverDesk}
-                onLeave={onLeaveDesk}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ========================================================
-          4. SOUTH ENCLOSED CABINS & CENTRAL ENTRANCE
-         ======================================================== */}
-      <div className="mt-5 grid grid-cols-12 gap-4 h-[160px]">
-        {/* Left Wing Cabins: Room 6, Room 5, Room 4, Room 3 */}
-        <div className="col-span-5 grid grid-cols-4 gap-3">
-          {[
-            { num: 6, code: 'WA2-RM-06' },
-            { num: 5, code: 'WA2-RM-05' },
-            { num: 4, code: 'WA2-RM-04' },
-            { num: 3, code: 'WA2-RM-03' }
-          ].map(({ num, code }) => {
-            const room = rooms.find((r) => r.id === code);
-            const isOccupied = room?.status === 'occupied';
-
-            return (
-              <div
-                key={code}
-                onClick={() => room && onSelectRoom(room)}
-                className={`bg-surface-container-low/70 border-2 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition-all hover:border-primary group ${
-                  isOccupied ? 'border-error/40' : 'border-outline-variant/40'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-on-surface font-mono">
-                    Room {num}
-                  </span>
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isOccupied ? 'bg-error shadow-[0_0_6px_#ef4444]' : 'bg-secondary shadow-[0_0_6px_#4edea3]'
-                    }`}
-                  />
-                </div>
-
-                <div className="text-[10px] text-on-surface-variant leading-tight">
-                  {room?.name.split('(')[1]?.replace(')', '') || 'Private'}
-                </div>
-
-                <div className="flex justify-between items-center text-[10px] text-outline pt-1 border-t border-outline-variant/20">
-                  <span>Cap: {room?.capacity}</span>
-                  <span className="text-primary font-mono text-[9px] group-hover:underline">
-                    {isOccupied ? 'In Use' : 'Book'}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Central Entrance (Marked with arrow as in blueprint) */}
-        <div className="col-span-2 bg-surface-container-high/40 border-2 border-dashed border-outline-variant/50 rounded-xl flex flex-col items-center justify-center p-3 text-center">
-          <span className="material-symbols-outlined text-primary text-2xl animate-bounce">
-            arrow_upward
-          </span>
-          <span className="text-xs font-bold text-on-surface tracking-wider uppercase font-mono mt-1">
-            Entrance
-          </span>
-          <span className="text-[10px] text-outline">Main Access Door</span>
-        </div>
-
-        {/* Right Wing Cabins: Room 2, Room 1 */}
-        <div className="col-span-5 grid grid-cols-2 gap-3">
-          {[
-            { num: 2, code: 'WA2-RM-02' },
-            { num: 1, code: 'WA2-RM-01' }
-          ].map(({ num, code }) => {
-            const room = rooms.find((r) => r.id === code);
-            const isOccupied = room?.status === 'occupied';
-
-            return (
-              <div
-                key={code}
-                onClick={() => room && onSelectRoom(room)}
-                className={`bg-surface-container-low/70 border-2 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition-all hover:border-primary group ${
-                  isOccupied ? 'border-error/40' : 'border-outline-variant/40'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-on-surface font-mono">
-                    Room {num}
-                  </span>
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isOccupied ? 'bg-error shadow-[0_0_6px_#ef4444]' : 'bg-secondary shadow-[0_0_6px_#4edea3]'
-                    }`}
-                  />
-                </div>
-
-                <div className="text-[10px] text-on-surface-variant leading-tight">
-                  {room?.name.split('(')[1]?.replace(')', '') || 'Executive Cabin'}
-                </div>
-
-                <div className="flex justify-between items-center text-[10px] text-outline pt-1 border-t border-outline-variant/20">
-                  <span>Cap: {room?.capacity}</span>
-                  <span className="text-primary font-mono text-[9px] group-hover:underline">
-                    {isOccupied ? 'In Use' : 'Book'}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex flex-col justify-center items-center h-full border-l border-slate-700/60 pl-4">
+          <div className="flex items-center gap-1.5 mb-2 px-1.5 py-0.5 rounded bg-white/[0.03] border border-white/[0.06] w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80" />
+            <span className="text-[10px] font-mono text-slate-300 uppercase tracking-wider font-semibold">Right Wall</span>
+            <span className="text-[9px] font-mono text-slate-400 bg-slate-800 px-1 rounded">5</span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {[1, 2, 3, 4, 5].map((i) => {
+              const desk = getDesk(`WA2-RW-${String(i).padStart(2, '0')}`);
+              if (!desk) return null;
+              return (
+                <DeskNode
+                  key={desk.id}
+                  desk={desk}
+                  isSelected={selectedDesk?.id === desk.id}
+                  isHighlighted={highlightedDeskId === desk.id}
+                  onSelect={onSelectDesk}
+                  onHover={onHoverDesk}
+                  onLeave={onLeaveDesk}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
   );
-};
+});

@@ -16,7 +16,6 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [department, setDepartment] = useState('Frontend Engineering');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -40,7 +39,6 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
       name,
       email,
       role: 'user',
-      department,
       avatar: pickedAvatar,
       active: true
     };
@@ -97,24 +95,6 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
               required
               className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary"
             />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-on-surface-variant block mb-1">
-              Department
-            </label>
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary"
-            >
-              <option value="Frontend Engineering">Frontend Engineering</option>
-              <option value="Backend Platform">Backend Platform</option>
-              <option value="Product Design">Product Design</option>
-              <option value="Data Science & ML">Data Science & ML</option>
-              <option value="QA & DevOps">QA & DevOps</option>
-              <option value="Growth & Sales">Growth & Sales</option>
-            </select>
           </div>
 
           <div>

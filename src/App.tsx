@@ -24,6 +24,7 @@ import { Sidebar, ActiveTab } from './components/Sidebar';
 import { Header } from './components/Header';
 import { FloorPlanViewport } from './components/FloorPlanViewport';
 import { BookingBar } from './components/BookingBar';
+import { SeatBookingModal } from './components/SeatBookingModal';
 import { MyBookingsModal } from './components/MyBookingsModal';
 import { EditBookingModal } from './components/EditBookingModal';
 import { ManagerAnalyticsModal } from './components/ManagerAnalyticsModal';
@@ -32,7 +33,9 @@ import { AdminHealthModal } from './components/AdminHealthModal';
 import { RegisterModal } from './components/RegisterModal';
 import { TimeGridModal } from './components/TimeGridModal';
 import { RoomBookingModal } from './components/RoomBookingModal';
+import { MeetingRoomsModal } from './components/MeetingRoomsModal';
 import { MicrosoftSSOModal } from './components/MicrosoftSSOModal';
+import { OutlookEmailsModal } from './components/OutlookEmailsModal';
 import { Avatar } from './components/Avatar';
 import { getTodayISODate } from './utils/dateTime';
 
@@ -45,6 +48,9 @@ export const App: React.FC = () => {
   // Selected Employee for Allocation (Admins and Managers allocate for chosen employees)
   const [selectedTargetUser, setSelectedTargetUser] = useState<UserProfile | null>(null);
 
+  // Seat Booking Multi-Day & Custom Schedule Modal
+  const [isSeatModalOpen, setIsSeatModalOpen] = useState<boolean>(false);
+
   // Auth Modals
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showSignUpModal, setShowSignUpModal] = useState<boolean>(false);
@@ -55,8 +61,7 @@ export const App: React.FC = () => {
   const [activeArea, setActiveArea] = useState<'area-1' | 'area-2'>('area-1');
   const [activeTab, setActiveTab] = useState<ActiveTab>('floor-plan');
 
-  // Zoom & Search
-  const [scale, setScale] = useState<number>(0.7);
+  // Search & Highlight
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [highlightedDeskId, setHighlightedDeskId] = useState<string | null>(null);
 
@@ -65,11 +70,11 @@ export const App: React.FC = () => {
   const [area2Desks, setArea2Desks] = useState<Desk[]>(() => generateWorkArea2Desks());
   const [area1Rooms, setArea1Rooms] = useState<Room[]>(WORK_AREA_1_ROOMS);
   const [area2Rooms, setArea2Rooms] = useState<Room[]>(WORK_AREA_2_ROOMS);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
 
   // Active Floor Plan selection & settings
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [selectedDuration, setSelectedDuration] = useState('Full Day (8h)');
-  const [showPresence, setShowPresence] = useState(false);
 
   // Exact Date and Time Slot state for dynamic allocation & de-allocation
   const [selectedDate, setSelectedDate] = useState<string>(() => getTodayISODate());
@@ -89,6 +94,8 @@ export const App: React.FC = () => {
   const [showEditBookingModal, setShowEditBookingModal] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [selectedRoomForBooking, setSelectedRoomForBooking] = useState<Room | null>(null);
+  const [showOutlookEmailsModal, setShowOutlookEmailsModal] = useState<boolean>(false);
+  const [outlookEmailsCount, setOutlookEmailsCount] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Toast notification helper
@@ -97,10 +104,6 @@ export const App: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Zoom handlers
-  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.15, 2.0));
-  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.15, 0.45));
-  const handleResetZoom = () => setScale(0.8);
 
   // Search handler
   const handleSearchChange = (query: string) => {
@@ -116,13 +119,11 @@ export const App: React.FC = () => {
       (d) =>
         d.id.toLowerCase().includes(q) ||
         d.code.toLowerCase().includes(q) ||
-        (d.occupant && d.occupant.name.toLowerCase().includes(q)) ||
-        (d.occupant && d.occupant.department.toLowerCase().includes(q))
+        (d.occupant && d.occupant.name.toLowerCase().includes(q))
     );
 
     if (matched) {
       setHighlightedDeskId(matched.id);
-      if (matched.occupant && !showPresence) setShowPresence(true);
     } else {
       setHighlightedDeskId(null);
     }
@@ -165,12 +166,18 @@ export const App: React.FC = () => {
         if (desks1 && desks1.length > 0) setArea1Desks(desks1);
         if (desks2 && desks2.length > 0) setArea2Desks(desks2);
 
-        const [rooms1, rooms2] = await Promise.all([
+        const [rooms1, rooms2, allR] = await Promise.all([
           api.getRooms('area-1', selectedDate, startTime, endTime).catch(() => null),
-          api.getRooms('area-2', selectedDate, startTime, endTime).catch(() => null)
+          api.getRooms('area-2', selectedDate, startTime, endTime).catch(() => null),
+          api.getRooms('all', selectedDate, startTime, endTime).catch(() => null)
         ]);
         if (rooms1 && rooms1.length > 0) setArea1Rooms(rooms1);
         if (rooms2 && rooms2.length > 0) setArea2Rooms(rooms2);
+        if (allR && allR.length > 0) {
+          setAllRooms(allR);
+        } else {
+          setAllRooms([...(rooms1 || WORK_AREA_1_ROOMS), ...(rooms2 || WORK_AREA_2_ROOMS)]);
+        }
 
         const all = await api.getAllBookings().catch(() => []);
         if (all) setAllBookings(all);
@@ -179,6 +186,9 @@ export const App: React.FC = () => {
           const myBookings = await api.getMyBookings().catch(() => []);
           setBookings(myBookings);
         }
+
+        const ems = await api.getEmailNotifications().catch(() => []);
+        if (ems) setOutlookEmailsCount(ems.length);
       } catch (err) {
         console.warn('Backend SQLite sync...', err);
       }
@@ -194,6 +204,8 @@ export const App: React.FC = () => {
       if (all) setAllBookings(all);
       const my = await api.getMyBookings().catch(() => []);
       if (my) setBookings(my);
+      const ems = await api.getEmailNotifications().catch(() => []);
+      if (ems) setOutlookEmailsCount(ems.length);
     } catch {
       // fallback
     }
@@ -202,17 +214,19 @@ export const App: React.FC = () => {
   // Refresh active desks and rooms with date/time slot filtering
   const refreshDesks = async (date = selectedDate, start = startTime, end = endTime) => {
     try {
-      const [desks1, desks2, rooms1, rooms2, all] = await Promise.all([
+      const [desks1, desks2, rooms1, rooms2, allR, all] = await Promise.all([
         api.getDesks('area-1', date, start, end).catch(() => null),
         api.getDesks('area-2', date, start, end).catch(() => null),
         api.getRooms('area-1', date, start, end).catch(() => null),
         api.getRooms('area-2', date, start, end).catch(() => null),
+        api.getRooms('all', date, start, end).catch(() => null),
         api.getAllBookings().catch(() => null)
       ]);
       if (desks1) setArea1Desks(desks1);
       if (desks2) setArea2Desks(desks2);
       if (rooms1) setArea1Rooms(rooms1);
       if (rooms2) setArea2Rooms(rooms2);
+      if (allR) setAllRooms(allR);
       if (all) setAllBookings(all);
     } catch {
       // fallback
@@ -316,56 +330,77 @@ export const App: React.FC = () => {
     }
   };
 
-  // Confirm Desk Reservation (Real SQLite DB creation with role enforcement)
-  const handleConfirmReservation = async () => {
+  // Confirm Desk Reservation (Real SQLite DB creation with role enforcement & multi-day support)
+  const handleConfirmReservation = async (customParams?: {
+    dates?: string[];
+    duration?: string;
+    startTime?: string;
+    endTime?: string;
+    targetUser?: UserProfile | null;
+  }) => {
     if (!selectedDesk) return;
 
     const isAdminOrManager = currentUser.role === 'admin' || currentUser.role === 'manager';
-    const targetEmployee = isAdminOrManager ? selectedTargetUser : currentUser;
+    const effectiveUser = customParams?.targetUser || (isAdminOrManager ? selectedTargetUser : currentUser);
 
-    if (isAdminOrManager && (!targetEmployee || targetEmployee.id === currentUser.id)) {
+    if (isAdminOrManager && (!effectiveUser || effectiveUser.id === currentUser.id)) {
       showToast('Admins and Managers cannot book seats for themselves. Please select an employee to allocate this seat.');
       return;
     }
 
-    // Business Rule Check: strictly 1 seat per user per day
-    const effectiveUserId = targetEmployee?.id || currentUser.id;
-    const effectiveUserName = targetEmployee?.name || currentUser.name;
-    const existingDayBooking = allBookings.find(
-      (b) =>
-        (b.userId === effectiveUserId || b.userName === effectiveUserName) &&
-        b.date === selectedDate &&
-        b.status === 'active' &&
-        Boolean(b.deskId)
-    );
+    const targetDates = customParams?.dates && customParams.dates.length > 0
+      ? customParams.dates
+      : [selectedDate];
+    const targetDuration = customParams?.duration || selectedDuration;
+    const targetStart = customParams?.startTime || startTime;
+    const targetEnd = customParams?.endTime || endTime;
 
-    if (existingDayBooking) {
-      const seatLabel = existingDayBooking.deskCode || existingDayBooking.deskId;
-      if (isAdminOrManager) {
-        showToast(`Rule Violation: ${effectiveUserName} already has Seat ${seatLabel} reserved on ${selectedDate}. Limit: 1 seat per user per day.`);
-      } else {
-        showToast(`Rule Violation: You already have Seat ${seatLabel} reserved on ${selectedDate}. Limit: 1 seat per user per day.`);
+    // Business Rule Check across all targetDates: strictly 1 seat per user per day
+    const effectiveUserId = effectiveUser?.id || currentUser.id;
+    const effectiveUserName = effectiveUser?.name || currentUser.name;
+
+    for (const singleDate of targetDates) {
+      const existingDayBooking = allBookings.find(
+        (b) =>
+          (b.userId === effectiveUserId || b.userName === effectiveUserName) &&
+          b.date === singleDate &&
+          b.status !== 'cancelled' &&
+          b.status !== 'completed' &&
+          Boolean(b.deskId)
+      );
+
+      if (existingDayBooking) {
+        const seatLabel = existingDayBooking.deskCode || existingDayBooking.deskId;
+        if (isAdminOrManager) {
+          showToast(`Rule Violation: ${effectiveUserName} already has Seat ${seatLabel} reserved on ${singleDate}. Limit: strictly 1 seat per user per day.`);
+        } else {
+          showToast(`Rule Violation: You already have Seat ${seatLabel} reserved on ${singleDate}. Limit: strictly 1 seat per user per day.`);
+        }
+        return;
       }
-      return;
     }
 
     try {
-      const newBooking = await api.createBooking({
+      const result = await api.createBooking({
         deskId: selectedDesk.id,
         areaId: activeArea,
-        duration: selectedDuration,
-        bookingDate: selectedDate,
-        startTime,
-        endTime,
-        targetUserId: isAdminOrManager && targetEmployee ? targetEmployee.id : undefined,
+        duration: targetDuration,
+        bookingDates: targetDates,
+        startTime: targetStart,
+        endTime: targetEnd,
+        targetUserId: isAdminOrManager && effectiveUser ? effectiveUser.id : undefined,
         callerUserId: currentUser.id,
         callerRole: currentUser.role
       });
 
-      setBookings((prev) => [newBooking, ...prev]);
-      setAllBookings((prev) => [newBooking, ...prev]);
+      const newBookingsList: Booking[] = Array.isArray((result as any).bookings) && (result as any).bookings.length > 0
+        ? (result as any).bookings
+        : [result as Booking];
 
-      const effectiveUser = targetEmployee || currentUser;
+      setBookings((prev) => [...newBookingsList, ...prev]);
+      setAllBookings((prev) => [...newBookingsList, ...prev]);
+
+      const effectiveUserForOccupant = effectiveUser || currentUser;
       const updateDesk = (desksList: Desk[]) =>
         desksList.map((d) =>
           d.id === selectedDesk.id
@@ -373,12 +408,11 @@ export const App: React.FC = () => {
                 ...d,
                 status: 'booked' as const,
                 occupant: {
-                  name: effectiveUser.name,
-                  avatar: effectiveUser.avatar,
-                  department: effectiveUser.department,
-                  role: `${effectiveUser.role.toUpperCase()}`,
-                  bookedTime: `${newBooking.startTime} - ${newBooking.endTime}`,
-                  hoursRemaining: selectedDuration.includes('Morning') ? '4h' : '8h'
+                  name: effectiveUserForOccupant.name,
+                  avatar: effectiveUserForOccupant.avatar,
+                  role: `${effectiveUserForOccupant.role.toUpperCase()}`,
+                  bookedTime: `${targetStart} - ${targetEnd}`,
+                  hoursRemaining: targetDuration.includes('Morning') ? '4h' : '8h'
                 }
               }
             : d
@@ -388,16 +422,28 @@ export const App: React.FC = () => {
       else setArea2Desks(updateDesk);
 
       setSelectedDesk(null);
+      setIsSeatModalOpen(false);
       if (isAdminOrManager) setSelectedTargetUser(null);
       refreshDesks(selectedDate, startTime, endTime);
       refreshBookingsData();
-      showToast(
-        isAdminOrManager
-          ? `🎉 Seat ${newBooking.deskId} successfully allocated to ${effectiveUser.name}!`
-          : `🎉 Reservation confirmed! Seat ${newBooking.deskId} allocated for ${newBooking.date} (${newBooking.startTime}-${newBooking.endTime}).`
-      );
+
+      const daysCount = targetDates.length;
+      if (daysCount === 1) {
+        showToast(
+          isAdminOrManager
+            ? `🎉 Seat ${selectedDesk.code || selectedDesk.id} allocated to ${effectiveUserForOccupant.name} for ${targetDates[0]}! Calendar invite sent to ${effectiveUserForOccupant.email}.`
+            : `🎉 Reservation confirmed! Seat ${selectedDesk.code || selectedDesk.id} booked for ${targetDates[0]}. Calendar invite sent to ${effectiveUserForOccupant.email}.`
+        );
+      } else {
+        showToast(
+          isAdminOrManager
+            ? `🎉 Seat ${selectedDesk.code || selectedDesk.id} allocated to ${effectiveUserForOccupant.name} across ${daysCount} days (${targetDates[0]} to ${targetDates[daysCount - 1]})!`
+            : `🎉 Multi-day reservation confirmed! Seat ${selectedDesk.code || selectedDesk.id} booked across ${daysCount} days (${targetDates[0]} to ${targetDates[daysCount - 1]})!`
+        );
+      }
     } catch (err: any) {
       showToast(err.message || 'Failed to complete reservation');
+      throw err;
     }
   };
 
@@ -474,32 +520,75 @@ export const App: React.FC = () => {
   const handleLocateSeat = (areaId: 'area-1' | 'area-2', deskId: string) => {
     setActiveArea(areaId);
     setActiveTab('floor-plan');
-    setShowPresence(true);
     setHighlightedDeskId(deskId);
     showToast(`Panning to Seat ${deskId}...`);
   };
 
-  // Room booking confirmation
+  // Meeting Room CRUD Handlers (Managers and Admins)
+  const handleCreateRoom = async (roomData: {
+    name: string;
+    code: string;
+    areaId: 'area-1' | 'area-2';
+    capacity: number;
+    amenities: string[];
+  }) => {
+    try {
+      await api.createRoom(roomData);
+      await refreshDesks(selectedDate, startTime, endTime);
+      showToast(`Meeting room "${roomData.name}" created successfully!`);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to create room');
+      throw err;
+    }
+  };
+
+  const handleDeleteRoom = async (roomId: string) => {
+    try {
+      await api.deleteRoom(roomId);
+      await refreshDesks(selectedDate, startTime, endTime);
+      showToast('Meeting room deleted and associated bookings released.');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete room');
+      throw err;
+    }
+  };
+
+  // Room booking confirmation (Users, Managers, and Admins; includes Microsoft Teams & multi-attendee invitations)
   const handleConfirmRoomBooking = async (
     room: Room,
     duration: string,
     bookingDate: string,
     roomStart: string,
-    roomEnd: string
+    roomEnd: string,
+    targetUserId?: string,
+    attendeeIds?: string[],
+    includeTeams?: boolean
   ) => {
     try {
       await api.createBooking({
         roomId: room.id,
-        areaId: activeArea,
+        areaId: room.areaId || activeArea,
         duration,
         bookingDate,
         startTime: roomStart,
-        endTime: roomEnd
+        endTime: roomEnd,
+        targetUserId,
+        callerUserId: currentUser.id,
+        callerRole: currentUser.role,
+        attendeeIds,
+        includeTeams: includeTeams !== false
       });
 
-      refreshDesks(selectedDate, startTime, endTime);
+      await refreshDesks(selectedDate, startTime, endTime);
+      await refreshBookingsData();
       setSelectedRoomForBooking(null);
-      showToast(`Meeting Room ${room.name} confirmed for ${bookingDate} (${roomStart} - ${roomEnd})!`);
+
+      const targetUser = targetUserId ? users.find((u) => u.id === targetUserId) : currentUser;
+      const count = attendeeIds?.length || 0;
+      const teamsNote = includeTeams !== false ? ' Microsoft Teams meeting created & ' : ' ';
+      const attendeeNote = count > 0 ? `syncing to ${count} attendees' schedules.` : `confirmed for ${targetUser?.name || 'you'}.`;
+
+      showToast(`🎉 Meeting Room ${room.name} booked!${teamsNote}${attendeeNote}`);
     } catch (err: any) {
       showToast(err.message || 'Failed to book room');
     }
@@ -548,7 +637,6 @@ export const App: React.FC = () => {
       name: newUser.name,
       email: newUser.email,
       password: 'password123',
-      department: newUser.department,
       role: newUser.role
     }).then((res) => {
       setUsers((prev) => [res.user, ...prev]);
@@ -624,14 +712,13 @@ export const App: React.FC = () => {
         bookingsCount={bookings.length}
         isCollapsed={isSidebarCollapsed}
         onLogout={handleLogout}
-        onGoToLanding={() => setIsAuthenticated(false)}
         onCollapse={() => setIsSidebarCollapsed(true)}
       />
 
       {/* Main View Area (Responsive left margin for mobile / desktop) */}
       <div
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-200 ${
-          isSidebarCollapsed ? 'pl-0 md:pl-16' : 'pl-0 md:pl-60'
+          isSidebarCollapsed ? 'pl-0 md:pl-16' : 'pl-0 md:pl-64'
         }`}
       >
         {/* Single Unified Sleek Header */}
@@ -683,155 +770,197 @@ export const App: React.FC = () => {
           occupancyRate={occupancyRate}
           totalSeats={totalSeats}
           bookedSeats={bookedSeats}
-          scale={scale}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onResetZoom={handleResetZoom}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
-          showPresence={showPresence}
-          onTogglePresence={setShowPresence}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
           onLogout={handleLogout}
-          onGoToLanding={() => setIsAuthenticated(false)}
+          onOpenOutlookEmails={() => setShowOutlookEmailsModal(true)}
+          emailCount={outlookEmailsCount}
         />
 
-        {/* Central Floor Plan Viewport (Full Screen & Spacious) */}
-        <main className="flex-1 pt-14 relative overflow-hidden bg-background">
-          {/* Allocation mode banner for Admin & Manager - Docked safely at top-right with dismiss button */}
-          {(currentUser.role === 'admin' || currentUser.role === 'manager') && selectedTargetUser && (
-            <div
-              style={{ backgroundColor: '#131826' }}
-              className="absolute top-3.5 right-6 z-20 hidden md:flex items-center gap-2.5 bg-[#131826] border border-emerald-500/40 px-3.5 py-1.5 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.85)] text-xs pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-150"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse flex-shrink-0" />
-              <span className="text-slate-400 text-[11px]">Allocating for:</span>
-              <Avatar
-                src={selectedTargetUser.avatar}
-                name={selectedTargetUser.name}
-                size="xs"
-                rounded="rounded-full"
+        {/* Central Content Viewport: Page Router for Sidebar Navigation */}
+        <main className="flex-1 pt-14 relative overflow-hidden bg-[#090D16] h-full flex flex-col">
+          {/* VIEW 1: FLOOR PLAN MAP */}
+          {activeTab === 'floor-plan' && (
+            <div className="w-full h-full relative overflow-hidden flex-1">
+              {/* Allocation mode banner for Admin & Manager - Docked safely at top-right with dismiss button */}
+              {(currentUser.role === 'admin' || currentUser.role === 'manager') && selectedTargetUser && (
+                <div
+                  style={{ backgroundColor: '#131826' }}
+                  className="absolute top-3.5 right-6 z-20 hidden md:flex items-center gap-2.5 bg-[#131826] border border-emerald-500/40 px-3.5 py-1.5 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.85)] text-xs pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-150"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse flex-shrink-0" />
+                  <span className="text-slate-400 text-[11px]">Allocating for:</span>
+                  <Avatar
+                    src={selectedTargetUser.avatar}
+                    name={selectedTargetUser.name}
+                    size="xs"
+                    rounded="rounded-full"
+                  />
+                  <span className="font-semibold text-slate-100">{selectedTargetUser.name}</span>
+                  <span className="text-[10px] text-emerald-400 font-mono">({selectedTargetUser.role.toUpperCase()})</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTargetUser(null)}
+                    className="ml-1 w-4 h-4 rounded-full bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white flex items-center justify-center text-[10px] cursor-pointer"
+                    title="Cancel allocation mode"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              <FloorPlanViewport
+                activeArea={activeArea}
+                desks={currentDesks}
+                rooms={currentRooms}
+                selectedDesk={selectedDesk}
+                highlightedDeskId={highlightedDeskId}
+                onSelectDesk={handleSelectDesk}
+                onSelectRoom={setSelectedRoomForBooking}
               />
-              <span className="font-semibold text-slate-100">{selectedTargetUser.name}</span>
-              <span className="text-[10px] text-emerald-400 font-mono">({selectedTargetUser.department})</span>
-              <button
-                type="button"
-                onClick={() => setSelectedTargetUser(null)}
-                className="ml-1 w-4 h-4 rounded-full bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white flex items-center justify-center text-[10px] cursor-pointer"
-                title="Cancel allocation mode"
-              >
-                ✕
-              </button>
+
+              {/* Floating Bottom Booking Drawer (Appears ONLY when seat is selected) */}
+              <BookingBar
+                selectedDesk={selectedDesk}
+                selectedDuration={selectedDuration}
+                onDurationChange={setSelectedDuration}
+                selectedDate={selectedDate}
+                onDateChange={(newDate) => {
+                  setSelectedDate(newDate);
+                  refreshDesks(newDate, startTime, endTime);
+                }}
+                startTime={startTime}
+                endTime={endTime}
+                onTimeChange={(newStart, newEnd) => {
+                  setStartTime(newStart);
+                  setEndTime(newEnd);
+                  setSelectedDuration(`${newStart} - ${newEnd}`);
+                  refreshDesks(selectedDate, newStart, newEnd);
+                }}
+                onOpenScheduleModal={() => setIsSeatModalOpen(true)}
+                onConfirm={() => handleConfirmReservation()}
+                onClearSelection={() => setSelectedDesk(null)}
+                currentUser={currentUser}
+                users={users}
+                selectedTargetUser={selectedTargetUser}
+                onSelectTargetUser={setSelectedTargetUser}
+                bookings={allBookings}
+              />
             </div>
           )}
 
-          <FloorPlanViewport
-            activeArea={activeArea}
-            desks={currentDesks}
-            rooms={currentRooms}
-            selectedDesk={selectedDesk}
-            showPresence={showPresence}
-            highlightedDeskId={highlightedDeskId}
-            scale={scale}
-            onScaleChange={setScale}
-            onSelectDesk={handleSelectDesk}
-            onSelectRoom={setSelectedRoomForBooking}
-          />
+          {/* VIEW 2: TIME GRID SCHEDULER PAGE */}
+          {activeTab === 'time-grid' && (
+            <TimeGridModal
+              isOpen={true}
+              isPageView={true}
+              onClose={() => setActiveTab('floor-plan')}
+              activeArea={activeArea}
+              onAreaChange={(area) => {
+                setActiveArea(area);
+                setSelectedDesk(null);
+                setHighlightedDeskId(null);
+              }}
+              desks={currentDesks}
+              selectedDate={selectedDate}
+              onSelectDesk={(desk) => {
+                handleSelectDesk(desk);
+                setActiveTab('floor-plan');
+              }}
+            />
+          )}
 
-          {/* Floating Bottom Booking Drawer (Appears ONLY when seat is selected) */}
-          <BookingBar
-            selectedDesk={selectedDesk}
-            selectedDuration={selectedDuration}
-            onDurationChange={setSelectedDuration}
-            selectedDate={selectedDate}
-            startTime={startTime}
-            endTime={endTime}
-            onShiftSelect={(slotId, s, e, dur) => {
-              setSelectedTimeSlot(slotId);
-              setStartTime(s);
-              setEndTime(e);
-              setSelectedDuration(dur);
-              refreshDesks(selectedDate, s, e);
-            }}
-            onConfirm={handleConfirmReservation}
-            onClearSelection={() => setSelectedDesk(null)}
-            currentUser={currentUser}
-            users={users}
-            selectedTargetUser={selectedTargetUser}
-            onSelectTargetUser={setSelectedTargetUser}
-            bookings={allBookings}
-          />
+          {/* VIEW 3: MY BOOKINGS PAGE */}
+          {activeTab === 'my-bookings' && (
+            <MyBookingsModal
+              isOpen={true}
+              isPageView={true}
+              onClose={() => setActiveTab('floor-plan')}
+              bookings={bookings}
+              onCancelBooking={handleCancelBooking}
+              onCheckIn={handleCheckIn}
+              onOpenEdit={(b) => {
+                setEditingBooking(b);
+                setShowEditBookingModal(true);
+              }}
+              onLocateSeat={handleLocateSeat}
+            />
+          )}
+
+          {/* VIEW 4: MEETING ROOMS BOOKING & MANAGEMENT PAGE */}
+          {activeTab === 'meeting-rooms' && (
+            <MeetingRoomsModal
+              isOpen={true}
+              isPageView={true}
+              onClose={() => setActiveTab('floor-plan')}
+              rooms={allRooms.length > 0 ? allRooms : [...area1Rooms, ...area2Rooms]}
+              userRole={currentUser.role}
+              onSelectRoomForBooking={(room) => setSelectedRoomForBooking(room)}
+              onCreateRoom={handleCreateRoom}
+              onDeleteRoom={handleDeleteRoom}
+            />
+          )}
+
+          {/* VIEW 5: MANAGER WORKPLACE ANALYTICS PAGE */}
+          {activeTab === 'analytics' && (
+            <ManagerAnalyticsModal
+              isOpen={true}
+              isPageView={true}
+              onClose={() => setActiveTab('floor-plan')}
+              area1Desks={area1Desks}
+              area2Desks={area2Desks}
+              onLocateSeat={handleLocateSeat}
+              onReleaseSeat={handleReleaseGhostSeat}
+              users={users}
+              bookings={allBookings}
+              selectedDate={selectedDate}
+              rooms={allRooms.length > 0 ? allRooms : [...area1Rooms, ...area2Rooms]}
+              onBookForUser={(emp) => {
+                setSelectedTargetUser(emp);
+                setActiveTab('floor-plan');
+                showToast(`Allocating seat for ${emp.name}. Select an available green desk.`);
+              }}
+            />
+          )}
+
+          {/* VIEW 6: USERS DIRECTORY PAGE */}
+          {activeTab === 'admin-users' && (
+            <AdminUsersModal
+              isOpen={true}
+              isPageView={true}
+              onClose={() => setActiveTab('floor-plan')}
+              users={users}
+              onUpdateRole={handleUpdateRole}
+              onToggleActive={handleToggleActive}
+              onAddUser={handleAddUser}
+              onDeleteUser={handleDeleteUser}
+              onBookForUser={(emp) => {
+                setSelectedTargetUser(emp);
+                setActiveTab('floor-plan');
+                showToast(`Allocating seat for ${emp.name}. Select an available green desk.`);
+              }}
+            />
+          )}
+
+          {/* VIEW 7: SYSTEM HEALTH PAGE */}
+          {activeTab === 'admin-health' && (
+            <AdminHealthModal
+              isOpen={true}
+              isPageView={true}
+              onClose={() => setActiveTab('floor-plan')}
+              health={systemHealth}
+              totalSeats={totalSeats}
+              occupiedSeats={bookedSeats}
+            />
+          )}
         </main>
       </div>
 
-      {/* Modals for App Router navigation tabs */}
-      <MyBookingsModal
-        isOpen={activeTab === 'my-bookings'}
-        onClose={() => setActiveTab('floor-plan')}
-        bookings={bookings}
-        onCancelBooking={handleCancelBooking}
-        onCheckIn={handleCheckIn}
-        onOpenEdit={(b) => {
-          setEditingBooking(b);
-          setShowEditBookingModal(true);
-        }}
-      />
-
-      <EditBookingModal
-        isOpen={showEditBookingModal}
-        onClose={() => {
-          setShowEditBookingModal(false);
-          setEditingBooking(null);
-        }}
-        booking={editingBooking}
-        availableDesks={currentDesks.filter((d) => d.status === 'available')}
-        onSave={handleSaveModifiedBooking}
-      />
-
-      <ManagerAnalyticsModal
-        isOpen={activeTab === 'analytics'}
-        onClose={() => setActiveTab('floor-plan')}
-        area1Desks={area1Desks}
-        area2Desks={area2Desks}
-        onLocateSeat={handleLocateSeat}
-        onReleaseSeat={handleReleaseGhostSeat}
-        users={users}
-        onBookForUser={(emp) => {
-          setSelectedTargetUser(emp);
-          setActiveTab('floor-plan');
-          showToast(`Allocating seat for ${emp.name}. Select an available green desk.`);
-        }}
-      />
-
-      <AdminUsersModal
-        isOpen={activeTab === 'admin-users'}
-        onClose={() => setActiveTab('floor-plan')}
-        users={users}
-        onUpdateRole={handleUpdateRole}
-        onToggleActive={handleToggleActive}
-        onAddUser={handleAddUser}
-        onDeleteUser={handleDeleteUser}
-        onBookForUser={(emp) => {
-          setSelectedTargetUser(emp);
-          setActiveTab('floor-plan');
-          showToast(`Allocating seat for ${emp.name}. Select an available green desk.`);
-        }}
-      />
-
-      <AdminHealthModal
-        isOpen={activeTab === 'admin-health'}
-        onClose={() => setActiveTab('floor-plan')}
-        health={systemHealth}
-      />
-
-      <TimeGridModal
-        isOpen={activeTab === 'time-grid'}
-        onClose={() => setActiveTab('floor-plan')}
-        activeArea={activeArea}
-        desks={currentDesks}
-        onSelectDesk={handleSelectDesk}
-      />
+      {/* Action Dialog Modals */}
 
       <RegisterModal
         isOpen={showRegisterModal}
@@ -851,12 +980,38 @@ export const App: React.FC = () => {
         defaultStartTime={startTime}
         defaultEndTime={endTime}
         onConfirmRoomBooking={handleConfirmRoomBooking}
+        userRole={currentUser.role}
+        users={users}
+        currentUserId={currentUser.id}
       />
 
       <MicrosoftSSOModal
         isOpen={showMicrosoftSSOModal}
         onClose={() => setShowMicrosoftSSOModal(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      <OutlookEmailsModal
+        isOpen={showOutlookEmailsModal}
+        onClose={() => setShowOutlookEmailsModal(false)}
+        currentUser={currentUser}
+      />
+
+      <SeatBookingModal
+        isOpen={isSeatModalOpen && !!selectedDesk}
+        onClose={() => setIsSeatModalOpen(false)}
+        desk={selectedDesk}
+        initialDate={selectedDate}
+        initialStartTime={startTime}
+        initialEndTime={endTime}
+        initialDuration={selectedDuration}
+        currentUser={currentUser}
+        users={users}
+        bookings={bookings}
+        allBookings={allBookings}
+        onConfirmBooking={handleConfirmReservation}
+        selectedTargetUser={selectedTargetUser}
+        onSelectTargetUser={setSelectedTargetUser}
       />
     </div>
   );

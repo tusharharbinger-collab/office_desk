@@ -74,7 +74,38 @@ export function initDatabase() {
       details TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS email_notifications (
+      id TEXT PRIMARY KEY,
+      booking_id TEXT NOT NULL,
+      recipient_email TEXT NOT NULL,
+      recipient_name TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('seat_booking', 'room_booking', 'booking_cancellation')),
+      status TEXT DEFAULT 'sent' CHECK(status IN ('sent', 'failed', 'queued')),
+      provider TEXT DEFAULT 'outlook',
+      html_content TEXT NOT NULL,
+      ics_content TEXT,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS booking_attendees (
+      id TEXT PRIMARY KEY,
+      booking_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      user_name TEXT NOT NULL,
+      user_email TEXT NOT NULL,
+      role TEXT DEFAULT 'attendee',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
+
+  // Migrate columns in existing database if missing
+  try { db.exec('ALTER TABLE bookings ADD COLUMN teams_meeting_url TEXT;'); } catch {}
+  try { db.exec('ALTER TABLE bookings ADD COLUMN attendees TEXT;'); } catch {}
 
   seedInitialData();
 }
@@ -119,16 +150,6 @@ function seedInitialData() {
       'user',
       'Product Design',
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80'
-    );
-
-    insertUser.run(
-      'usr-elena',
-      'elena@smartdesk.com',
-      hash('user123'),
-      'Elena Rostova',
-      'user',
-      'Data Science & AI',
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80'
     );
   }
 
