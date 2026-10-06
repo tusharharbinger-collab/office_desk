@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Desk, UserProfile, Booking, Room } from '../types';
+import { Desk, UserProfile, Booking, Room, OfficeLocation } from '../types';
 import { Avatar } from './Avatar';
 import {
   exportAttendanceReport,
@@ -21,6 +21,7 @@ interface ManagerAnalyticsModalProps {
   selectedDate?: string;
   rooms?: Room[];
   isPageView?: boolean;
+  selectedOffice?: OfficeLocation;
 }
 
 type MainTab = 'reports' | 'presence' | 'utilization' | 'assign';
@@ -38,7 +39,8 @@ export const ManagerAnalyticsModal: React.FC<ManagerAnalyticsModalProps> = ({
   bookings = [],
   selectedDate = new Date().toISOString().split('T')[0],
   rooms = [],
-  isPageView = true
+  isPageView = true,
+  selectedOffice = 'global-port'
 }) => {
   if (!isOpen) return null;
 
@@ -170,8 +172,20 @@ export const ManagerAnalyticsModal: React.FC<ManagerAnalyticsModalProps> = ({
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                 Manager Workplace Analytics
               </h2>
+              <span
+                className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold uppercase flex items-center gap-1 border ${
+                  selectedOffice === 'siddhant'
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    : 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px]">
+                  {selectedOffice === 'siddhant' ? 'location_city' : 'corporate_fare'}
+                </span>
+                <span>{selectedOffice === 'siddhant' ? 'Siddhant' : 'Global Port'}</span>
+              </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 font-mono font-bold uppercase tracking-wider">
-                Real-Time Watch
+                Live Watch
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">

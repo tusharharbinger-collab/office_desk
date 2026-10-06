@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Room, Role } from '../types';
+import { Room, Role, OfficeLocation } from '../types';
 
 interface MeetingRoomsModalProps {
   isOpen: boolean;
   onClose: () => void;
   rooms: Room[];
   userRole: Role;
+  selectedOffice?: OfficeLocation;
   onSelectRoomForBooking: (room: Room) => void;
   onCreateRoom: (roomData: {
     name: string;
@@ -13,6 +14,7 @@ interface MeetingRoomsModalProps {
     areaId: 'area-1' | 'area-2';
     capacity: number;
     amenities: string[];
+    officeId?: OfficeLocation;
   }) => Promise<void>;
   onDeleteRoom: (roomId: string) => Promise<void>;
   isPageView?: boolean;
@@ -23,6 +25,7 @@ export const MeetingRoomsModal: React.FC<MeetingRoomsModalProps> = ({
   onClose,
   rooms,
   userRole,
+  selectedOffice = 'global-port',
   onSelectRoomForBooking,
   onCreateRoom,
   onDeleteRoom,
@@ -130,7 +133,8 @@ export const MeetingRoomsModal: React.FC<MeetingRoomsModalProps> = ({
         code: newCode.trim(),
         areaId: newAreaId,
         capacity: newCapacity,
-        amenities: selectedAmenities
+        amenities: selectedAmenities,
+        officeId: selectedOffice
       });
       setShowCreateModal(false);
       setNewName('');

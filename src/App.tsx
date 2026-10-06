@@ -5,7 +5,8 @@ import {
   UserProfile,
   Booking,
   Role,
-  SystemHealthMetric
+  SystemHealthMetric,
+  OfficeLocation
 } from './types';
 import {
   INITIAL_USERS,
@@ -16,6 +17,7 @@ import {
   WORK_AREA_2_ROOMS
 } from './data/officeLayouts';
 import { api } from './services/api';
+import { OFFICES } from './data/officeConfig';
 
 import { LandingPage } from './components/LandingPage';
 import { LoginModal } from './components/LoginModal';
@@ -36,6 +38,7 @@ import { RoomBookingModal } from './components/RoomBookingModal';
 import { MeetingRoomsModal } from './components/MeetingRoomsModal';
 import { MicrosoftSSOModal } from './components/MicrosoftSSOModal';
 import { OutlookEmailsModal } from './components/OutlookEmailsModal';
+import { OfficeSelectionModal } from './components/OfficeSelectionModal';
 import { Avatar } from './components/Avatar';
 import { getTodayISODate } from './utils/dateTime';
 
@@ -43,6 +46,14 @@ export const App: React.FC = () => {
   // Authentication & View State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserProfile>(INITIAL_USERS[0]);
+
+  // Office Campus Location State (Global Port vs Siddhant)
+  const [selectedOffice, setSelectedOffice] = useState<OfficeLocation>(() => {
+    const saved = localStorage.getItem('smartdesk_selected_office');
+    if (saved === 'siddhant' || saved === 'global-port') return saved;
+    return 'global-port';
+  });
+  const [showOfficeModal, setShowOfficeModal] = useState<boolean>(false);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
 
   // Selected Employee for Allocation (Admins and Managers allocate for chosen employees)
@@ -129,6 +140,19 @@ export const App: React.FC = () => {
     }
   };
 
+  // Handler to switch office campus (Global Port vs Siddhant)
+  const handleSelectOffice = (office: OfficeLocation) => {
+    setSelectedOffice(office);
+    localStorage.setItem('smartdesk_selected_office', office);
+    sessionStorage.setItem('smartdesk_office_chosen', 'true');
+    setShowOfficeModal(false);
+    setSelectedDesk(null);
+    setHighlightedDeskId(null);
+    refreshDesks(selectedDate, startTime, endTime, office);
+    refreshBookingsData(office);
+    showToast(`Switched active workspace to ${office === 'siddhant' ? 'Siddhant Campus' : 'Global Port'}`);
+  };
+
   // Load Initial Desks & Auth from SQLite on mount
   useEffect(() => {
     async function loadData() {
@@ -142,6 +166,7 @@ export const App: React.FC = () => {
             const res = await api.loginWithMicrosoftCode(authCode);
             setCurrentUser(res.user);
             setIsAuthenticated(true);
+            setShowOfficeModal(true);
             showToast(`Welcome, ${res.user.name}! (Microsoft 365)`);
           } catch (err: any) {
             showToast(err.message || 'Failed to complete Microsoft login');
@@ -152,6 +177,9 @@ export const App: React.FC = () => {
         if (me) {
           setCurrentUser(me);
           setIsAuthenticated(true);
+          if (sessionStorage.getItem('smartdesk_office_chosen') !== 'true') {
+            setShowOfficeModal(true);
+          }
         }
 
         const dbUsers = await api.getUsers().catch(() => null);
@@ -160,16 +188,16 @@ export const App: React.FC = () => {
         }
 
         const [desks1, desks2] = await Promise.all([
-          api.getDesks('area-1', selectedDate, startTime, endTime).catch(() => null),
-          api.getDesks('area-2', selectedDate, startTime, endTime).catch(() => null)
+          api.getDesks('area-1', selectedDate, startTime, endTime, selectedOffice).catch(() => null),
+          api.getDesks('area-2', selectedDate, startTime, endTime, selectedOffice).catch(() => null)
         ]);
         if (desks1 && desks1.length > 0) setArea1Desks(desks1);
         if (desks2 && desks2.length > 0) setArea2Desks(desks2);
 
         const [rooms1, rooms2, allR] = await Promise.all([
-          api.getRooms('area-1', selectedDate, startTime, endTime).catch(() => null),
-          api.getRooms('area-2', selectedDate, startTime, endTime).catch(() => null),
-          api.getRooms('all', selectedDate, startTime, endTime).catch(() => null)
+          api.getRooms('area-1', selectedDate, startTime, endTime, selectedOffice).catch(() => null),
+          api.getRooms('area-2', selectedDate, startTime, endTime, selectedOffice).catch(() => null),
+          api.getRooms('all', selectedDate, startTime, endTime, selectedOffice).catch(() => null)
         ]);
         if (rooms1 && rooms1.length > 0) setArea1Rooms(rooms1);
         if (rooms2 && rooms2.length > 0) setArea2Rooms(rooms2);
@@ -179,11 +207,11 @@ export const App: React.FC = () => {
           setAllRooms([...(rooms1 || WORK_AREA_1_ROOMS), ...(rooms2 || WORK_AREA_2_ROOMS)]);
         }
 
-        const all = await api.getAllBookings().catch(() => []);
+        const all = await api.getAllBookings(selectedOffice).catch(() => []);
         if (all) setAllBookings(all);
 
         if (me) {
-          const myBookings = await api.getMyBookings().catch(() => []);
+          const myBookings = await api.getMyBookings(selectedOffice).catch(() => []);
           setBookings(myBookings);
         }
 
@@ -198,11 +226,11 @@ export const App: React.FC = () => {
   }, [isAuthenticated]);
 
   // Refresh both allBookings (for seat rules) and user's myBookings
-  const refreshBookingsData = async () => {
+  const refreshBookingsData = async (office = selectedOffice) => {
     try {
-      const all = await api.getAllBookings().catch(() => []);
+      const all = await api.getAllBookings(office).catch(() => []);
       if (all) setAllBookings(all);
-      const my = await api.getMyBookings().catch(() => []);
+      const my = await api.getMyBookings(office).catch(() => []);
       if (my) setBookings(my);
       const ems = await api.getEmailNotifications().catch(() => []);
       if (ems) setOutlookEmailsCount(ems.length);
@@ -211,16 +239,21 @@ export const App: React.FC = () => {
     }
   };
 
-  // Refresh active desks and rooms with date/time slot filtering
-  const refreshDesks = async (date = selectedDate, start = startTime, end = endTime) => {
+  // Refresh active desks and rooms with date/time slot & office filtering
+  const refreshDesks = async (
+    date = selectedDate,
+    start = startTime,
+    end = endTime,
+    office = selectedOffice
+  ) => {
     try {
       const [desks1, desks2, rooms1, rooms2, allR, all] = await Promise.all([
-        api.getDesks('area-1', date, start, end).catch(() => null),
-        api.getDesks('area-2', date, start, end).catch(() => null),
-        api.getRooms('area-1', date, start, end).catch(() => null),
-        api.getRooms('area-2', date, start, end).catch(() => null),
-        api.getRooms('all', date, start, end).catch(() => null),
-        api.getAllBookings().catch(() => null)
+        api.getDesks('area-1', date, start, end, office).catch(() => null),
+        api.getDesks('area-2', date, start, end, office).catch(() => null),
+        api.getRooms('area-1', date, start, end, office).catch(() => null),
+        api.getRooms('area-2', date, start, end, office).catch(() => null),
+        api.getRooms('all', date, start, end, office).catch(() => null),
+        api.getAllBookings(office).catch(() => null)
       ]);
       if (desks1) setArea1Desks(desks1);
       if (desks2) setArea2Desks(desks2);
@@ -233,15 +266,15 @@ export const App: React.FC = () => {
     }
   };
 
-  // Re-sync allocations whenever selectedDate, startTime, endTime, or activeArea change
+  // Re-sync allocations whenever selectedDate, startTime, endTime, activeArea, or selectedOffice change
   // Also periodically poll every 30s to de-allocate expired seats dynamically
   useEffect(() => {
-    refreshDesks(selectedDate, startTime, endTime);
+    refreshDesks(selectedDate, startTime, endTime, selectedOffice);
     const interval = setInterval(() => {
-      refreshDesks(selectedDate, startTime, endTime);
+      refreshDesks(selectedDate, startTime, endTime, selectedOffice);
     }, 30000);
     return () => clearInterval(interval);
-  }, [selectedDate, startTime, endTime, activeArea]);
+  }, [selectedDate, startTime, endTime, activeArea, selectedOffice]);
 
   // Auto-collapse sidebar on screens < 1024px for maximum floor plan space
   useEffect(() => {
@@ -291,9 +324,10 @@ export const App: React.FC = () => {
       setSelectedTargetUser(user);
     }
     setIsAuthenticated(true);
+    setShowOfficeModal(true); // Prompts user/manager/admin to select campus
     showToast(`Welcome! Logged in as ${user.name} (${user.role.toUpperCase()})`);
-    refreshBookingsData();
-    refreshDesks();
+    refreshBookingsData(selectedOffice);
+    refreshDesks(selectedDate, startTime, endTime, selectedOffice);
   };
 
   // Auth Success Handlers
@@ -305,9 +339,10 @@ export const App: React.FC = () => {
       setSelectedTargetUser(user);
     }
     setIsAuthenticated(true);
+    setShowOfficeModal(true); // Prompts user/manager/admin to select campus
     showToast(`Welcome back, ${user.name}!`);
-    refreshBookingsData();
-    refreshDesks();
+    refreshBookingsData(selectedOffice);
+    refreshDesks(selectedDate, startTime, endTime, selectedOffice);
   };
 
   const handleLogout = () => {
@@ -384,6 +419,7 @@ export const App: React.FC = () => {
       const result = await api.createBooking({
         deskId: selectedDesk.id,
         areaId: activeArea,
+        officeId: selectedOffice,
         duration: targetDuration,
         bookingDates: targetDates,
         startTime: targetStart,
@@ -424,21 +460,22 @@ export const App: React.FC = () => {
       setSelectedDesk(null);
       setIsSeatModalOpen(false);
       if (isAdminOrManager) setSelectedTargetUser(null);
-      refreshDesks(selectedDate, startTime, endTime);
-      refreshBookingsData();
+      refreshDesks(selectedDate, startTime, endTime, selectedOffice);
+      refreshBookingsData(selectedOffice);
 
+      const campusLabel = selectedOffice === 'siddhant' ? ' (Siddhant Campus)' : ' (Global Port)';
       const daysCount = targetDates.length;
       if (daysCount === 1) {
         showToast(
           isAdminOrManager
-            ? `🎉 Seat ${selectedDesk.code || selectedDesk.id} allocated to ${effectiveUserForOccupant.name} for ${targetDates[0]}! Calendar invite sent to ${effectiveUserForOccupant.email}.`
-            : `🎉 Reservation confirmed! Seat ${selectedDesk.code || selectedDesk.id} booked for ${targetDates[0]}. Calendar invite sent to ${effectiveUserForOccupant.email}.`
+            ? `🎉 Seat ${selectedDesk.code || selectedDesk.id}${campusLabel} allocated to ${effectiveUserForOccupant.name} for ${targetDates[0]}! Calendar invite sent to ${effectiveUserForOccupant.email}.`
+            : `🎉 Reservation confirmed! Seat ${selectedDesk.code || selectedDesk.id}${campusLabel} booked for ${targetDates[0]}. Calendar invite sent to ${effectiveUserForOccupant.email}.`
         );
       } else {
         showToast(
           isAdminOrManager
-            ? `🎉 Seat ${selectedDesk.code || selectedDesk.id} allocated to ${effectiveUserForOccupant.name} across ${daysCount} days (${targetDates[0]} to ${targetDates[daysCount - 1]})!`
-            : `🎉 Multi-day reservation confirmed! Seat ${selectedDesk.code || selectedDesk.id} booked across ${daysCount} days (${targetDates[0]} to ${targetDates[daysCount - 1]})!`
+            ? `🎉 Seat ${selectedDesk.code || selectedDesk.id}${campusLabel} allocated to ${effectiveUserForOccupant.name} across ${daysCount} days (${targetDates[0]} to ${targetDates[daysCount - 1]})!`
+            : `🎉 Multi-day reservation confirmed! Seat ${selectedDesk.code || selectedDesk.id}${campusLabel} booked across ${daysCount} days (${targetDates[0]} to ${targetDates[daysCount - 1]})!`
         );
       }
     } catch (err: any) {
@@ -531,11 +568,15 @@ export const App: React.FC = () => {
     areaId: 'area-1' | 'area-2';
     capacity: number;
     amenities: string[];
+    officeId?: OfficeLocation;
   }) => {
     try {
-      await api.createRoom(roomData);
-      await refreshDesks(selectedDate, startTime, endTime);
-      showToast(`Meeting room "${roomData.name}" created successfully!`);
+      await api.createRoom({
+        ...roomData,
+        officeId: roomData.officeId || selectedOffice
+      });
+      await refreshDesks(selectedDate, startTime, endTime, selectedOffice);
+      showToast(`Meeting room "${roomData.name}" created successfully in ${selectedOffice === 'siddhant' ? 'Siddhant Campus' : 'Global Port'}!`);
     } catch (err: any) {
       showToast(err.message || 'Failed to create room');
       throw err;
@@ -545,7 +586,7 @@ export const App: React.FC = () => {
   const handleDeleteRoom = async (roomId: string) => {
     try {
       await api.deleteRoom(roomId);
-      await refreshDesks(selectedDate, startTime, endTime);
+      await refreshDesks(selectedDate, startTime, endTime, selectedOffice);
       showToast('Meeting room deleted and associated bookings released.');
     } catch (err: any) {
       showToast(err.message || 'Failed to delete room');
@@ -568,6 +609,7 @@ export const App: React.FC = () => {
       await api.createBooking({
         roomId: room.id,
         areaId: room.areaId || activeArea,
+        officeId: room.officeId || selectedOffice,
         duration,
         bookingDate,
         startTime: roomStart,
@@ -579,8 +621,8 @@ export const App: React.FC = () => {
         includeTeams: includeTeams !== false
       });
 
-      await refreshDesks(selectedDate, startTime, endTime);
-      await refreshBookingsData();
+      await refreshDesks(selectedDate, startTime, endTime, selectedOffice);
+      await refreshBookingsData(selectedOffice);
       setSelectedRoomForBooking(null);
 
       const targetUser = targetUserId ? users.find((u) => u.id === targetUserId) : currentUser;
@@ -711,6 +753,8 @@ export const App: React.FC = () => {
         userRole={currentUser.role}
         bookingsCount={bookings.length}
         isCollapsed={isSidebarCollapsed}
+        selectedOffice={selectedOffice}
+        onOpenOfficeModal={() => setShowOfficeModal(true)}
         onLogout={handleLogout}
         onCollapse={() => setIsSidebarCollapsed(true)}
       />
@@ -729,10 +773,13 @@ export const App: React.FC = () => {
             setSelectedDesk(null);
             setHighlightedDeskId(null);
           }}
+          selectedOffice={selectedOffice}
+          onOfficeChange={handleSelectOffice}
+          onOpenOfficeModal={() => setShowOfficeModal(true)}
           selectedDate={selectedDate}
           onDateChange={(d) => {
             setSelectedDate(d);
-            refreshDesks(d, startTime, endTime);
+            refreshDesks(d, startTime, endTime, selectedOffice);
           }}
           selectedTimeSlot={selectedTimeSlot}
           onTimeSlotChange={(slotId, sTime, eTime) => {
@@ -741,7 +788,7 @@ export const App: React.FC = () => {
             const e = eTime || endTime;
             setStartTime(s);
             setEndTime(e);
-            refreshDesks(selectedDate, s, e);
+            refreshDesks(selectedDate, s, e, selectedOffice);
           }}
           startTime={startTime}
           endTime={endTime}
@@ -749,7 +796,7 @@ export const App: React.FC = () => {
             setSelectedTimeSlot('custom');
             setStartTime(s);
             setEndTime(e);
-            refreshDesks(selectedDate, s, e);
+            refreshDesks(selectedDate, s, e, selectedOffice);
           }}
           currentUser={currentUser}
           allUsers={users}
@@ -764,6 +811,7 @@ export const App: React.FC = () => {
             } else {
               setSelectedTargetUser(user);
             }
+            setShowOfficeModal(true);
             showToast(`Switched active profile to ${user.name} (${user.role.toUpperCase()})`);
           }}
           onOpenRegister={() => setShowRegisterModal(true)}
@@ -815,6 +863,7 @@ export const App: React.FC = () => {
 
               <FloorPlanViewport
                 activeArea={activeArea}
+                selectedOffice={selectedOffice}
                 desks={currentDesks}
                 rooms={currentRooms}
                 selectedDesk={selectedDesk}
@@ -831,7 +880,7 @@ export const App: React.FC = () => {
                 selectedDate={selectedDate}
                 onDateChange={(newDate) => {
                   setSelectedDate(newDate);
-                  refreshDesks(newDate, startTime, endTime);
+                  refreshDesks(newDate, startTime, endTime, selectedOffice);
                 }}
                 startTime={startTime}
                 endTime={endTime}
@@ -839,7 +888,7 @@ export const App: React.FC = () => {
                   setStartTime(newStart);
                   setEndTime(newEnd);
                   setSelectedDuration(`${newStart} - ${newEnd}`);
-                  refreshDesks(selectedDate, newStart, newEnd);
+                  refreshDesks(selectedDate, newStart, newEnd, selectedOffice);
                 }}
                 onOpenScheduleModal={() => setIsSeatModalOpen(true)}
                 onConfirm={() => handleConfirmReservation()}
@@ -860,6 +909,7 @@ export const App: React.FC = () => {
               isPageView={true}
               onClose={() => setActiveTab('floor-plan')}
               activeArea={activeArea}
+              selectedOffice={selectedOffice}
               onAreaChange={(area) => {
                 setActiveArea(area);
                 setSelectedDesk(null);
@@ -899,6 +949,7 @@ export const App: React.FC = () => {
               onClose={() => setActiveTab('floor-plan')}
               rooms={allRooms.length > 0 ? allRooms : [...area1Rooms, ...area2Rooms]}
               userRole={currentUser.role}
+              selectedOffice={selectedOffice}
               onSelectRoomForBooking={(room) => setSelectedRoomForBooking(room)}
               onCreateRoom={handleCreateRoom}
               onDeleteRoom={handleDeleteRoom}
@@ -918,6 +969,7 @@ export const App: React.FC = () => {
               users={users}
               bookings={allBookings}
               selectedDate={selectedDate}
+              selectedOffice={selectedOffice}
               rooms={allRooms.length > 0 ? allRooms : [...area1Rooms, ...area2Rooms]}
               onBookForUser={(emp) => {
                 setSelectedTargetUser(emp);
@@ -1012,6 +1064,15 @@ export const App: React.FC = () => {
         onConfirmBooking={handleConfirmReservation}
         selectedTargetUser={selectedTargetUser}
         onSelectTargetUser={setSelectedTargetUser}
+      />
+
+      {/* Office Campus Chooser Modal (Global Port vs Siddhant) */}
+      <OfficeSelectionModal
+        isOpen={showOfficeModal}
+        currentOffice={selectedOffice}
+        onSelectOffice={handleSelectOffice}
+        onClose={() => setShowOfficeModal(false)}
+        canDismiss={true}
       />
     </div>
   );

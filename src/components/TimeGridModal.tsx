@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Desk } from '../types';
+import { Desk, OfficeLocation } from '../types';
 
 interface TimeGridModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface TimeGridModalProps {
   isPageView?: boolean;
   onAreaChange?: (area: 'area-1' | 'area-2') => void;
   selectedDate?: string;
+  selectedOffice?: OfficeLocation;
 }
 
 export const TimeGridModal: React.FC<TimeGridModalProps> = ({
@@ -20,7 +21,8 @@ export const TimeGridModal: React.FC<TimeGridModalProps> = ({
   onSelectDesk,
   isPageView = true,
   onAreaChange,
-  selectedDate = new Date().toISOString().split('T')[0]
+  selectedDate = new Date().toISOString().split('T')[0],
+  selectedOffice = 'global-port'
 }) => {
   if (!isOpen) return null;
 
@@ -72,7 +74,20 @@ export const TimeGridModal: React.FC<TimeGridModalProps> = ({
                 Workspace / Timelines
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-500" />
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30 font-mono font-bold uppercase">
+              <span
+                className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold uppercase flex items-center gap-1 border ${
+                  selectedOffice === 'siddhant'
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    : 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px]">
+                  {selectedOffice === 'siddhant' ? 'location_city' : 'corporate_fare'}
+                </span>
+                <span>{selectedOffice === 'siddhant' ? 'Siddhant Campus' : 'Global Port Campus'}</span>
+              </span>
+              <span className="w-1 h-1 rounded-full bg-slate-500" />
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-slate-300 border border-white/[0.1] font-mono font-bold uppercase">
                 Hourly Matrix
               </span>
             </div>

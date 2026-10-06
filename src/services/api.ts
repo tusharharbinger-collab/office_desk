@@ -1,4 +1,4 @@
-import { Desk, Room, Booking, UserProfile, Role, EmailNotification } from '../types';
+import { Desk, Room, Booking, UserProfile, Role, EmailNotification, OfficeLocation } from '../types';
 
 const BASE_URL = '/api';
 
@@ -132,9 +132,9 @@ export const api = {
     return data;
   },
 
-  // Desks & Rooms from SQLite with date & time slot filtering
-  async getDesks(areaId: 'area-1' | 'area-2', date?: string, startTime?: string, endTime?: string): Promise<Desk[]> {
-    const params = new URLSearchParams({ areaId });
+  // Desks & Rooms from SQLite with date, time slot & office filtering
+  async getDesks(areaId: 'area-1' | 'area-2', date?: string, startTime?: string, endTime?: string, officeId: OfficeLocation = 'global-port'): Promise<Desk[]> {
+    const params = new URLSearchParams({ areaId, officeId });
     if (date) params.append('date', date);
     if (startTime) params.append('startTime', startTime);
     if (endTime) params.append('endTime', endTime);
@@ -143,8 +143,8 @@ export const api = {
     return res.json();
   },
 
-  async getRooms(areaId?: string, date?: string, startTime?: string, endTime?: string): Promise<Room[]> {
-    const params = new URLSearchParams();
+  async getRooms(areaId?: string, date?: string, startTime?: string, endTime?: string, officeId: OfficeLocation = 'global-port'): Promise<Room[]> {
+    const params = new URLSearchParams({ officeId });
     if (areaId && areaId !== 'all') params.append('areaId', areaId);
     if (date) params.append('date', date);
     if (startTime) params.append('startTime', startTime);
@@ -160,6 +160,7 @@ export const api = {
     areaId: 'area-1' | 'area-2';
     capacity: number;
     amenities: string[];
+    officeId?: OfficeLocation;
   }): Promise<Room> {
     const res = await fetch(`${BASE_URL}/rooms`, {
       method: 'POST',
@@ -167,7 +168,10 @@ export const api = {
         'Content-Type': 'application/json',
         ...getAuthHeader()
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        ...data,
+        officeId: data.officeId || 'global-port'
+      })
     });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Failed to create meeting room');
@@ -199,6 +203,7 @@ export const api = {
     deskId?: string;
     roomId?: string;
     areaId: string;
+    officeId?: OfficeLocation;
     duration: string;
     bookingDate?: string;
     bookingDates?: string[];
@@ -222,7 +227,8 @@ export const api = {
       body: JSON.stringify({
         ...booking,
         callerUserId: callerId,
-        callerRole: callerRole
+        callerRole: callerRole,
+        officeId: booking.officeId || 'global-port'
       })
     });
     const data = await res.json();
@@ -230,16 +236,22 @@ export const api = {
     return data;
   },
 
-  async getMyBookings(): Promise<Booking[]> {
-    const res = await fetch(`${BASE_URL}/bookings/my`, {
+  async getMyBookings(officeId?: OfficeLocation | 'all'): Promise<Booking[]> {
+    const params = new URLSearchParams();
+    if (officeId && officeId !== 'all') params.append('officeId', officeId);
+    const url = params.toString() ? `${BASE_URL}/bookings/my?${params.toString()}` : `${BASE_URL}/bookings/my`;
+    const res = await fetch(url, {
       headers: getAuthHeader()
     });
     if (!res.ok) throw new Error('Failed to fetch user bookings');
     return res.json();
   },
 
-  async getAllBookings(): Promise<Booking[]> {
-    const res = await fetch(`${BASE_URL}/bookings/all`);
+  async getAllBookings(officeId?: OfficeLocation | 'all'): Promise<Booking[]> {
+    const params = new URLSearchParams();
+    if (officeId && officeId !== 'all') params.append('officeId', officeId);
+    const url = params.toString() ? `${BASE_URL}/bookings/all?${params.toString()}` : `${BASE_URL}/bookings/all`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch all bookings');
     return res.json();
   },
@@ -321,8 +333,11 @@ export const api = {
   },
 
   // Workplace Reports
-  async getReportSummary(): Promise<any> {
-    const res = await fetch(`${BASE_URL}/reports/summary`, {
+  async getReportSummary(officeId?: OfficeLocation | 'all'): Promise<any> {
+    const params = new URLSearchParams();
+    if (officeId && officeId !== 'all') params.append('officeId', officeId);
+    const url = params.toString() ? `${BASE_URL}/reports/summary?${params.toString()}` : `${BASE_URL}/reports/summary`;
+    const res = await fetch(url, {
       headers: getAuthHeader()
     });
     if (!res.ok) throw new Error('Failed to fetch reports summary');

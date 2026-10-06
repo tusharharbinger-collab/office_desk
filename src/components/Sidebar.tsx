@@ -1,5 +1,5 @@
 import React from 'react';
-import { Role } from '../types';
+import { Role, OfficeLocation } from '../types';
 
 export type ActiveTab = 'floor-plan' | 'time-grid' | 'my-bookings' | 'meeting-rooms' | 'analytics' | 'admin-users' | 'admin-health';
 
@@ -9,6 +9,8 @@ interface SidebarProps {
   userRole: Role;
   bookingsCount: number;
   isCollapsed: boolean;
+  selectedOffice?: OfficeLocation;
+  onOpenOfficeModal?: () => void;
   onLogout?: () => void;
   onCollapse?: () => void;
 }
@@ -19,6 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   userRole,
   bookingsCount,
   isCollapsed,
+  selectedOffice = 'global-port',
+  onOpenOfficeModal,
   onLogout,
   onCollapse
 }) => {
@@ -84,6 +88,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Active Campus Switcher Pill */}
+        {isCollapsed ? (
+          <div
+            onClick={() => onOpenOfficeModal && onOpenOfficeModal()}
+            className={`w-10 h-10 mx-auto mb-4 rounded-xl border flex items-center justify-center cursor-pointer transition-all shadow-sm ${
+              selectedOffice === 'siddhant'
+                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-300'
+                : 'bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/40 text-sky-300'
+            }`}
+            title={`Active Campus: ${selectedOffice === 'siddhant' ? 'Siddhant' : 'Global Port'}. Click to switch.`}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {selectedOffice === 'siddhant' ? 'location_city' : 'corporate_fare'}
+            </span>
+          </div>
+        ) : (
+          <div
+            onClick={() => onOpenOfficeModal && onOpenOfficeModal()}
+            className={`w-full mb-4 p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+              selectedOffice === 'siddhant'
+                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.1)]'
+                : 'bg-sky-500/10 hover:bg-sky-500/20 border-sky-500/30 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.1)]'
+            }`}
+            title="Click to Switch Campus (Global Port / Siddhant)"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="material-symbols-outlined text-[18px]">
+                {selectedOffice === 'siddhant' ? 'location_city' : 'corporate_fare'}
+              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold text-white truncate">
+                  {selectedOffice === 'siddhant' ? 'Siddhant Campus' : 'Global Port Campus'}
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {selectedOffice === 'siddhant' ? '120 Desks • 4 Rooms' : '210 Desks • 8 Rooms'}
+                </span>
+              </div>
+            </div>
+            <span className="material-symbols-outlined text-xs text-slate-400 hover:text-white">sync_alt</span>
+          </div>
+        )}
 
         {/* Navigation Tabs */}
         <nav className="space-y-1 w-full">

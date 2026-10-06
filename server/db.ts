@@ -35,7 +35,8 @@ export function initDatabase() {
       orientation TEXT NOT NULL,
       status TEXT DEFAULT 'available',
       amenities TEXT NOT NULL,
-      price_per_hour REAL DEFAULT 15.0
+      price_per_hour REAL DEFAULT 15.0,
+      office_id TEXT DEFAULT 'global-port'
     );
 
     CREATE TABLE IF NOT EXISTS rooms (
@@ -45,7 +46,8 @@ export function initDatabase() {
       area_id TEXT NOT NULL,
       capacity INTEGER NOT NULL,
       status TEXT DEFAULT 'available',
-      amenities TEXT NOT NULL
+      amenities TEXT NOT NULL,
+      office_id TEXT DEFAULT 'global-port'
     );
 
     CREATE TABLE IF NOT EXISTS bookings (
@@ -64,6 +66,7 @@ export function initDatabase() {
       check_in_status INTEGER DEFAULT 0,
       cost REAL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      office_id TEXT DEFAULT 'global-port',
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
@@ -106,6 +109,16 @@ export function initDatabase() {
   // Migrate columns in existing database if missing
   try { db.exec('ALTER TABLE bookings ADD COLUMN teams_meeting_url TEXT;'); } catch {}
   try { db.exec('ALTER TABLE bookings ADD COLUMN attendees TEXT;'); } catch {}
+  try { db.exec("ALTER TABLE desks ADD COLUMN office_id TEXT DEFAULT 'global-port';"); } catch {}
+  try { db.exec("ALTER TABLE rooms ADD COLUMN office_id TEXT DEFAULT 'global-port';"); } catch {}
+  try { db.exec("ALTER TABLE bookings ADD COLUMN office_id TEXT DEFAULT 'global-port';"); } catch {}
+
+  // Normalize existing records so office_id is never NULL
+  try {
+    db.exec("UPDATE desks SET office_id = 'global-port' WHERE office_id IS NULL OR office_id = '';");
+    db.exec("UPDATE rooms SET office_id = 'global-port' WHERE office_id IS NULL OR office_id = '';");
+    db.exec("UPDATE bookings SET office_id = 'global-port' WHERE office_id IS NULL OR office_id = '';");
+  } catch {}
 
   seedInitialData();
 }
@@ -463,8 +476,8 @@ function seedInitialData() {
   const countRooms = db.prepare('SELECT COUNT(*) as count FROM rooms').get() as { count: number };
   if (countRooms.count === 0) {
     const insertRoom = db.prepare(`
-      INSERT INTO rooms (id, code, name, area_id, capacity, status, amenities)
-      VALUES (?, ?, ?, ?, ?, 'available', ?)
+      INSERT INTO rooms (id, code, name, area_id, capacity, status, amenities, office_id)
+      VALUES (?, ?, ?, ?, ?, 'available', ?, 'global-port')
     `);
 
     insertRoom.run('WA1-CONF-01', 'CONF-1', 'Executive Boardroom', 'area-1', 14, JSON.stringify(['4K Video Conferencing', '85" Digital Whiteboard', 'Polycom Mic Array']));
@@ -476,5 +489,223 @@ function seedInitialData() {
     insertRoom.run('WA2-RM-03', 'ROOM-3', 'Room 3 (Interview Cabin)', 'area-2', 3, JSON.stringify(['Webcam Bar', 'Soundproof Door']));
     insertRoom.run('WA2-RM-02', 'ROOM-2', 'Room 2 (Strategy Room)', 'area-2', 6, JSON.stringify(['Dual 65" Displays', 'Presentation Clicker']));
     insertRoom.run('WA2-RM-01', 'ROOM-1', 'Room 1 (Director Cabin)', 'area-2', 4, JSON.stringify(['Private Balcony Access', 'Lounge Chairs']));
+  }
+
+  // ========================================================
+  // 3. SIDDHANT CAMPUS: DESKS & ROOMS SEEDING (office_id = 'siddhant')
+  // Blueprint awaiting architectural image import
+  // ========================================================
+  const countSiddhantDesks = db.prepare("SELECT COUNT(*) as count FROM desks WHERE office_id = 'siddhant'").get() as { count: number };
+  if (countSiddhantDesks.count === 0) {
+    const insertSiddhantDesk = db.prepare(`
+      INSERT INTO desks (id, code, area_id, zone_name, pod_name, row_num, col_num, orientation, status, amenities, price_per_hour, office_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'available', ?, ?, 'siddhant')
+    `);
+
+    // --- Siddhant Area 1: 80 Desks ---
+    // 6 Pods of 8 desks each (48 desks)
+    const podNames = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta'];
+    let deskCounter = 1;
+
+    for (let pIdx = 0; pIdx < podNames.length; pIdx++) {
+      const pName = podNames[pIdx];
+      for (let r = 1; r <= 4; r++) {
+        // Left desk
+        insertSiddhantDesk.run(
+          `SID-WA1-${String(deskCounter).padStart(2, '0')}`,
+          `S${deskCounter}`,
+          'area-1',
+          `Zone ${String.fromCharCode(65 + pIdx)} // Pod ${pName}`,
+          `Pod ${pName} (West)`,
+          r,
+          1,
+          'facing-right',
+          JSON.stringify(['Dual 4K Monitor', 'Height-Adjustable Desk', 'Type-C 100W Hub']),
+          16.0
+        );
+        deskCounter++;
+
+        // Right desk
+        insertSiddhantDesk.run(
+          `SID-WA1-${String(deskCounter).padStart(2, '0')}`,
+          `S${deskCounter}`,
+          'area-1',
+          `Zone ${String.fromCharCode(65 + pIdx)} // Pod ${pName}`,
+          `Pod ${pName} (East)`,
+          r,
+          2,
+          'facing-left',
+          JSON.stringify(['Dual 4K Monitor', 'Height-Adjustable Desk', 'Type-C 100W Hub']),
+          16.0
+        );
+        deskCounter++;
+      }
+    }
+
+    // 2 Executive Bays of 8 desks each (16 desks -> total 64)
+    for (let b = 1; b <= 2; b++) {
+      for (let r = 1; r <= 4; r++) {
+        insertSiddhantDesk.run(
+          `SID-WA1-${String(deskCounter).padStart(2, '0')}`,
+          `S${deskCounter}`,
+          'area-1',
+          'Zone G // Executive Bays',
+          `Executive Bay ${b} (West)`,
+          r,
+          1,
+          'facing-right',
+          JSON.stringify(['Ultra-wide Curved Display', 'Ergonomic Leather Seating', 'Wireless Charging']),
+          18.0
+        );
+        deskCounter++;
+
+        insertSiddhantDesk.run(
+          `SID-WA1-${String(deskCounter).padStart(2, '0')}`,
+          `S${deskCounter}`,
+          'area-1',
+          'Zone G // Executive Bays',
+          `Executive Bay ${b} (East)`,
+          r,
+          2,
+          'facing-left',
+          JSON.stringify(['Ultra-wide Curved Display', 'Ergonomic Leather Seating', 'Wireless Charging']),
+          18.0
+        );
+        deskCounter++;
+      }
+    }
+
+    // West Window Bank (8 desks -> total 72)
+    for (let w = 1; w <= 8; w++) {
+      insertSiddhantDesk.run(
+        `SID-WA1-${String(deskCounter).padStart(2, '0')}`,
+        `W${w}`,
+        'area-1',
+        'Zone H // Perimeter Window Bank',
+        'West Panoramic Bank',
+        w,
+        1,
+        'facing-right',
+        JSON.stringify(['Skyline View', 'Dual Monitor', 'Power Outlet']),
+        15.0
+      );
+      deskCounter++;
+    }
+
+    // East Window Bank (8 desks -> total 80)
+    for (let e = 1; e <= 8; e++) {
+      insertSiddhantDesk.run(
+        `SID-WA1-${String(deskCounter).padStart(2, '0')}`,
+        `E${e}`,
+        'area-1',
+        'Zone H // Perimeter Window Bank',
+        'East Panoramic Bank',
+        e,
+        1,
+        'facing-left',
+        JSON.stringify(['Skyline View', 'Dual Monitor', 'Power Outlet']),
+        15.0
+      );
+      deskCounter++;
+    }
+
+    // --- Siddhant Area 2: 40 Desks ---
+    let wa2Counter = 1;
+    // 2 Focus Pods (10 desks each = 20 desks)
+    for (let p = 1; p <= 2; p++) {
+      for (let r = 1; r <= 5; r++) {
+        insertSiddhantDesk.run(
+          `SID-WA2-${String(wa2Counter).padStart(2, '0')}`,
+          `FP${p}-${(r - 1) * 2 + 1}`,
+          'area-2',
+          `Focus Wing // Pod ${p}`,
+          `Focus Pod ${p} (Left)`,
+          r,
+          1,
+          'facing-right',
+          JSON.stringify(['Dual Monitor', 'Acoustic Sound Insulation', 'Ergonomic Chair']),
+          16.0
+        );
+        wa2Counter++;
+
+        insertSiddhantDesk.run(
+          `SID-WA2-${String(wa2Counter).padStart(2, '0')}`,
+          `FP${p}-${(r - 1) * 2 + 2}`,
+          'area-2',
+          `Focus Wing // Pod ${p}`,
+          `Focus Pod ${p} (Right)`,
+          r,
+          2,
+          'facing-left',
+          JSON.stringify(['Dual Monitor', 'Acoustic Sound Insulation', 'Ergonomic Chair']),
+          16.0
+        );
+        wa2Counter++;
+      }
+    }
+
+    // 2 Quiet Zone Banks (10 desks each = 20 desks -> total 40)
+    for (let q = 1; q <= 2; q++) {
+      for (let r = 1; r <= 10; r++) {
+        insertSiddhantDesk.run(
+          `SID-WA2-${String(wa2Counter).padStart(2, '0')}`,
+          `QZ${q}-${r}`,
+          'area-2',
+          `Silent Zone Bank ${q}`,
+          `Silent Workstation ${r}`,
+          r,
+          1,
+          q === 1 ? 'facing-right' : 'facing-left',
+          JSON.stringify(['Noise Cancelling Environment', 'Ultrawide 4K', 'USB-C Dock']),
+          15.0
+        );
+        wa2Counter++;
+      }
+    }
+  }
+
+  // Siddhant Rooms Seeding
+  const countSiddhantRooms = db.prepare("SELECT COUNT(*) as count FROM rooms WHERE office_id = 'siddhant'").get() as { count: number };
+  if (countSiddhantRooms.count === 0) {
+    const insertSiddhantRoom = db.prepare(`
+      INSERT INTO rooms (id, code, name, area_id, capacity, status, amenities, office_id)
+      VALUES (?, ?, ?, ?, ?, 'available', ?, 'siddhant')
+    `);
+
+    insertSiddhantRoom.run(
+      'SID-CONF-01',
+      'CONF-1',
+      'Siddhant Executive Boardroom',
+      'area-1',
+      14,
+      JSON.stringify(['4K Dual Screen', 'Dolby Voice Telepresence', 'Smart Digital Whiteboard', 'Polycom Mic Array'])
+    );
+
+    insertSiddhantRoom.run(
+      'SID-CONF-02',
+      'CONF-2',
+      'Siddhant Innovation Hub',
+      'area-1',
+      8,
+      JSON.stringify(['Touchscreen Display', 'Acoustic Wall Panels', 'Wireless Presentation', 'Type-C Hub'])
+    );
+
+    insertSiddhantRoom.run(
+      'SID-FOCUS-01',
+      'ROOM-1',
+      'Siddhant Focus Cabin A',
+      'area-2',
+      4,
+      JSON.stringify(['4K Display', 'Conference Phone', 'Soundproof Glass', 'Standing Table'])
+    );
+
+    insertSiddhantRoom.run(
+      'SID-FOCUS-02',
+      'ROOM-2',
+      'Siddhant 1-on-1 Pod B',
+      'area-2',
+      2,
+      JSON.stringify(['Privacy Glass', 'Ergonomic Chairs', 'Webcam Bar', 'Fast USB-C Charging'])
+    );
   }
 }

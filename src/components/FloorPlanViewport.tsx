@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Desk, Room } from '../types';
+import { Desk, Room, OfficeLocation } from '../types';
 import { WorkArea1Map } from './WorkArea1Map';
 import { WorkArea2Map } from './WorkArea2Map';
+import { SiddhantWorkAreaMap } from './SiddhantWorkAreaMap';
 import { SeatTooltip } from './SeatTooltip';
 
 interface FloorPlanViewportProps {
   activeArea: 'area-1' | 'area-2';
+  selectedOffice?: OfficeLocation;
   desks: Desk[];
   rooms: Room[];
   selectedDesk: Desk | null;
@@ -18,6 +20,7 @@ interface FloorPlanViewportProps {
 
 export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   activeArea,
+  selectedOffice = 'global-port',
   desks,
   rooms,
   selectedDesk,
@@ -64,9 +67,9 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   const availableCount = desks.filter((d) => d.status === 'available').length;
   const bookedCount = desks.filter((d) => d.status === 'booked').length;
 
-  // Optimized blueprint dimensions based on active floor plan
-  const mapW = activeArea === 'area-1' ? 1180 : 1380;
-  const mapH = activeArea === 'area-1' ? 950 : 620;
+  // Optimized blueprint dimensions based on active floor plan and office
+  const mapW = selectedOffice === 'siddhant' ? 1220 : (activeArea === 'area-1' ? 1180 : 1380);
+  const mapH = selectedOffice === 'siddhant' ? 920 : (activeArea === 'area-1' ? 950 : 620);
 
   // Sync external scale if supplied and different
   useEffect(() => {
@@ -468,7 +471,19 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
           contain: 'layout style'
         }}
       >
-        {activeArea === 'area-1' ? (
+        {selectedOffice === 'siddhant' ? (
+          <SiddhantWorkAreaMap
+            activeArea={activeArea}
+            desks={desks}
+            rooms={rooms}
+            selectedDesk={selectedDesk}
+            highlightedDeskId={highlightedDeskId}
+            onSelectDesk={onSelectDesk}
+            onHoverDesk={handleHoverDesk}
+            onLeaveDesk={handleLeaveDesk}
+            onSelectRoom={onSelectRoom}
+          />
+        ) : activeArea === 'area-1' ? (
           <WorkArea1Map
             desks={desks}
             rooms={rooms}

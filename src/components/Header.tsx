@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile, Role } from '../types';
+import { UserProfile, Role, OfficeLocation } from '../types';
 import {
   getTodayISODate,
   getTomorrowISODate,
@@ -7,10 +7,15 @@ import {
   calculateDurationHours
 } from '../utils/dateTime';
 import { Avatar } from './Avatar';
+import { OFFICES } from '../data/officeConfig';
 
 interface HeaderProps {
   activeArea: 'area-1' | 'area-2';
   onAreaChange: (area: 'area-1' | 'area-2') => void;
+  // Office location switcher
+  selectedOffice?: OfficeLocation;
+  onOfficeChange?: (office: OfficeLocation) => void;
+  onOpenOfficeModal?: () => void;
   // Date & Time slot filtering
   selectedDate: string;
   onDateChange: (date: string) => void;
@@ -47,6 +52,9 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   activeArea,
   onAreaChange,
+  selectedOffice = 'global-port',
+  onOfficeChange,
+  onOpenOfficeModal,
   selectedDate,
   onDateChange,
   selectedTimeSlot,
@@ -73,8 +81,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [dateTimeOpen, setDateTimeOpen] = useState(false);
+  const [officeDropdownOpen, setOfficeDropdownOpen] = useState(false);
   const dateTimeRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const officeMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Close dropdown on outside click
@@ -86,14 +96,17 @@ export const Header: React.FC<HeaderProps> = ({
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserDropdownOpen(false);
       }
+      if (officeMenuRef.current && !officeMenuRef.current.contains(e.target as Node)) {
+        setOfficeDropdownOpen(false);
+      }
     }
-    if (dateTimeOpen || userDropdownOpen) {
+    if (dateTimeOpen || userDropdownOpen || officeDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [dateTimeOpen, userDropdownOpen]);
+  }, [dateTimeOpen, userDropdownOpen, officeDropdownOpen]);
 
   // Global Ctrl+K / Cmd+K search shortcut focus
   useEffect(() => {
@@ -173,13 +186,133 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-2">
+            {/* Campus / Office Location Capsule & Quick Switcher */}
+            <div className="relative" ref={officeMenuRef}>
+              <button
+                type="button"
+                onClick={() => setOfficeDropdownOpen(!officeDropdownOpen)}
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+                  selectedOffice === 'siddhant'
+                    ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
+                    : 'bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/40 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.15)]'
+                }`}
+                title="Switch Office Campus (Global Port / Siddhant)"
+              >
+                <span className="material-symbols-outlined text-[17px]">
+                  {selectedOffice === 'siddhant' ? 'location_city' : 'corporate_fare'}
+                </span>
+                <span className="whitespace-nowrap font-bold">
+                  {selectedOffice === 'siddhant' ? 'Siddhant' : 'Global Port'}
+                </span>
+                <span className="material-symbols-outlined text-xs transition-transform duration-200">
+                  {officeDropdownOpen ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+
+              {/* Office Switcher Dropdown Menu */}
+              {officeDropdownOpen && (
+                <div className="absolute top-11 left-0 z-50 w-72 rounded-2xl bg-[#0D121D] border border-white/[0.12] p-2 shadow-[0_15px_40px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2.5 py-1.5 border-b border-white/[0.06] mb-1">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">
+                      Switch Office Campus
+                    </span>
+                  </div>
+
+                  {/* Option 1: Global Port */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOfficeChange) onOfficeChange('global-port');
+                      setOfficeDropdownOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl text-left transition-all flex items-start justify-between cursor-pointer mb-1 ${
+                      selectedOffice === 'global-port'
+                        ? 'bg-sky-500/20 border border-sky-400/30 text-white'
+                        : 'hover:bg-white/[0.04] text-slate-300 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="material-symbols-outlined text-sky-400 text-lg mt-0.5">corporate_fare</span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-white">Global Port</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-semibold">
+                            Primary
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">210 Desks (130 + 80) • 8 Rooms</p>
+                        <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-1 mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          Full Blueprint Active
+                        </span>
+                      </div>
+                    </div>
+                    {selectedOffice === 'global-port' && (
+                      <span className="material-symbols-outlined text-sky-400 text-base">check_circle</span>
+                    )}
+                  </button>
+
+                  {/* Option 2: Siddhant */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOfficeChange) onOfficeChange('siddhant');
+                      setOfficeDropdownOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl text-left transition-all flex items-start justify-between cursor-pointer ${
+                      selectedOffice === 'siddhant'
+                        ? 'bg-emerald-500/20 border border-emerald-400/30 text-white'
+                        : 'hover:bg-white/[0.04] text-slate-300 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="material-symbols-outlined text-emerald-400 text-lg mt-0.5">location_city</span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-white">Siddhant</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
+                            New Campus
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">120 Desks (80 + 40) • 4 Rooms</p>
+                        <span className="text-[9px] font-mono text-amber-400 flex items-center gap-1 mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          Blueprint Overlay Pending
+                        </span>
+                      </div>
+                    </div>
+                    {selectedOffice === 'siddhant' && (
+                      <span className="material-symbols-outlined text-emerald-400 text-base">check_circle</span>
+                    )}
+                  </button>
+
+                  {/* Campus Explorer Modal Button */}
+                  {onOpenOfficeModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOfficeDropdownOpen(false);
+                        onOpenOfficeModal();
+                      }}
+                      className="w-full mt-1 pt-2 border-t border-white/[0.06] text-center text-[11px] text-sky-400 hover:text-sky-300 font-semibold flex items-center justify-center gap-1 py-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">open_in_new</span>
+                      <span>Compare Campus Specs...</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Segmented Area Switcher (Apple/Linear Style) */}
             <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9 shadow-inner">
               <button
                 onClick={() => onAreaChange('area-1')}
                 className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                   activeArea === 'area-1'
-                    ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                    ? selectedOffice === 'siddhant'
+                      ? 'bg-emerald-500/20 text-emerald-200 font-semibold border border-emerald-400/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+                      : 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
                 }`}
               >
@@ -187,11 +320,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
                     activeArea === 'area-1'
-                      ? 'bg-sky-400/25 text-sky-200 font-bold'
+                      ? selectedOffice === 'siddhant'
+                        ? 'bg-emerald-400/25 text-emerald-200 font-bold'
+                        : 'bg-sky-400/25 text-sky-200 font-bold'
                       : 'text-slate-500 bg-white/[0.04]'
                   }`}
                 >
-                  130
+                  {selectedOffice === 'siddhant' ? '80' : '130'}
                 </span>
               </button>
 
@@ -199,7 +334,9 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => onAreaChange('area-2')}
                 className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                   activeArea === 'area-2'
-                    ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                    ? selectedOffice === 'siddhant'
+                      ? 'bg-emerald-500/20 text-emerald-200 font-semibold border border-emerald-400/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+                      : 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
                 }`}
               >
@@ -207,11 +344,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
                     activeArea === 'area-2'
-                      ? 'bg-sky-400/25 text-sky-200 font-bold'
+                      ? selectedOffice === 'siddhant'
+                        ? 'bg-emerald-400/25 text-emerald-200 font-bold'
+                        : 'bg-sky-400/25 text-sky-200 font-bold'
                       : 'text-slate-500 bg-white/[0.04]'
                   }`}
                 >
-                  80
+                  {selectedOffice === 'siddhant' ? '40' : '80'}
                 </span>
               </button>
             </div>

@@ -314,6 +314,20 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
                         {isRoom ? (b.podName || b.deskId) : b.deskId}
                       </span>
 
+                      {/* Office Campus Badge */}
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-mono font-bold border flex items-center gap-1 ${
+                          b.officeId === 'siddhant'
+                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                            : 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">
+                          {b.officeId === 'siddhant' ? 'location_city' : 'corporate_fare'}
+                        </span>
+                        <span>{b.officeId === 'siddhant' ? 'Siddhant' : 'Global Port'}</span>
+                      </span>
+
                       {/* Status */}
                       <span
                         className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-semibold ${

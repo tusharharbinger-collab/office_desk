@@ -414,6 +414,7 @@ try {
 // ========================================================
 app.get('/api/desks', (req, res) => {
   const areaId = req.query.areaId as string || 'area-1';
+  const officeId = req.query.officeId as string || 'global-port';
   const { date: defaultDate } = getLocalDateAndTime();
   const queryDate = (req.query.date as string) || defaultDate;
   const startTime = (req.query.startTime as string) || '09:00';
@@ -422,7 +423,7 @@ app.get('/api/desks', (req, res) => {
   expirePastBookings();
 
   try {
-    // Joins only active bookings on this exact date whose time window overlaps with [startTime, endTime]
+    // Joins only active bookings on this exact date whose time window overlaps with [startTime, endTime] and office_id
     const desks: any[] = db.prepare(`
       SELECT d.*, 
              b.id as booking_id, 
@@ -440,10 +441,11 @@ app.get('/api/desks', (req, res) => {
                           AND b.status = 'active' 
                           AND b.booking_date = ?
                           AND (b.start_time < ? AND b.end_time > ?)
+                          AND (b.office_id = d.office_id OR b.office_id IS NULL)
       LEFT JOIN users u ON b.user_id = u.id
-      WHERE d.area_id = ?
+      WHERE d.area_id = ? AND d.office_id = ?
       ORDER BY d.row_num, d.col_num
-    `).all(queryDate, endTime, startTime, areaId);
+    `).all(queryDate, endTime, startTime, areaId, officeId);
 
     const formatted = desks.map((d) => {
       let status = 'available';
@@ -465,6 +467,7 @@ app.get('/api/desks', (req, res) => {
         id: d.id,
         code: d.code,
         areaId: d.area_id,
+        officeId: d.office_id || 'global-port',
         zoneName: d.zone_name,
         podName: d.pod_name,
         row: d.row_num,
@@ -485,6 +488,7 @@ app.get('/api/desks', (req, res) => {
 
 app.get('/api/rooms', (req, res) => {
   const areaId = req.query.areaId as string;
+  const officeId = req.query.officeId as string || 'global-port';
   const { date: defaultDate } = getLocalDateAndTime();
   const queryDate = (req.query.date as string) || defaultDate;
   const startTime = (req.query.startTime as string) || '09:00';
@@ -506,15 +510,26 @@ app.get('/api/rooms', (req, res) => {
              u.role as occupant_role
       FROM rooms r
       LEFT JOIN bookings b ON r.id = b.room_id 
-                          AND b.status = 'active'
+                          AND b.status = 'active' 
                           AND b.booking_date = ?
                           AND (b.start_time < ? AND b.end_time > ?)
+                          AND (b.office_id = r.office_id OR b.office_id IS NULL)
       LEFT JOIN users u ON b.user_id = u.id
     `;
     const params: any[] = [queryDate, endTime, startTime];
+    const whereClauses: string[] = [];
+
+    if (officeId && officeId !== 'all') {
+      whereClauses.push('r.office_id = ?');
+      params.push(officeId);
+    }
     if (areaId && areaId !== 'all') {
-      sql += ' WHERE r.area_id = ?';
+      whereClauses.push('r.area_id = ?');
       params.push(areaId);
+    }
+
+    if (whereClauses.length > 0) {
+      sql += ' WHERE ' + whereClauses.join(' AND ');
     }
     sql += ' ORDER BY r.name ASC';
 
@@ -525,6 +540,7 @@ app.get('/api/rooms', (req, res) => {
       code: r.code,
       name: r.name,
       areaId: r.area_id,
+      officeId: r.office_id || 'global-port',
       capacity: r.capacity,
       status: r.booking_id ? 'occupied' : 'available',
       amenities: JSON.parse(r.amenities),
@@ -553,7 +569,7 @@ app.post('/api/rooms', authenticateToken, (req: AuthRequest, res) => {
     return res.status(403).json({ error: 'Only Managers and Admins can create meeting rooms' });
   }
 
-  const { name, code, areaId, capacity, amenities } = req.body;
+  const { name, code, areaId, capacity, amenities, officeId } = req.body;
   if (!name || !code) {
     return res.status(400).json({ error: 'Room name and code are required' });
   }
@@ -561,6 +577,7 @@ app.post('/api/rooms', authenticateToken, (req: AuthRequest, res) => {
   try {
     const id = `RM-${Date.now().toString().slice(-5)}`;
     const area = areaId || 'area-1';
+    const targetOffice = officeId || 'global-port';
     const cap = Number(capacity) || 4;
     const amenList = Array.isArray(amenities)
       ? amenities
@@ -568,20 +585,21 @@ app.post('/api/rooms', authenticateToken, (req: AuthRequest, res) => {
     const amenJson = JSON.stringify(amenList);
 
     db.prepare(`
-      INSERT INTO rooms (id, code, name, area_id, capacity, status, amenities)
-      VALUES (?, ?, ?, ?, ?, 'available', ?)
-    `).run(id, code.toUpperCase(), name, area, cap, amenJson);
+      INSERT INTO rooms (id, code, name, area_id, capacity, status, amenities, office_id)
+      VALUES (?, ?, ?, ?, ?, 'available', ?, ?)
+    `).run(id, code.toUpperCase(), name, area, cap, amenJson, targetOffice);
 
     db.prepare(`
       INSERT INTO system_logs (event_type, user_id, details)
       VALUES ('ROOM_CREATED', ?, ?)
-    `).run(callerUser.id, `${callerUser.role.toUpperCase()} ${callerUser.name} created meeting room ${name} (${code}) in ${area}`);
+    `).run(callerUser.id, `${callerUser.role.toUpperCase()} ${callerUser.name} created meeting room ${name} (${code}) in ${area} (${targetOffice})`);
 
     res.status(201).json({
       id,
       code: code.toUpperCase(),
       name,
       areaId: area,
+      officeId: targetOffice,
       capacity: cap,
       status: 'available',
       amenities: amenList
@@ -626,7 +644,7 @@ app.delete('/api/rooms/:id', authenticateToken, (req: AuthRequest, res) => {
 // 3. BOOKINGS MANAGEMENT (REAL SQLITE TRANSACTIONS)
 // ========================================================
 app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
-  let { deskId, roomId, areaId, duration, bookingDate, bookingDates, dates, startTime, endTime, targetUserId, attendeeIds, includeTeams } = req.body;
+  let { deskId, roomId, areaId, duration, bookingDate, bookingDates, dates, startTime, endTime, targetUserId, attendeeIds, includeTeams, officeId } = req.body;
   const callerUser = req.user!;
 
   if (!deskId && !roomId) {
@@ -701,7 +719,6 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
     if (isCallerAdminOrManager && targetUserId) {
       targetEmployee = db.prepare('SELECT id, name, email, role, department, avatar, active FROM users WHERE id = ? OR email = ?').get(targetUserId, targetUserId);
       if (!targetEmployee) {
-        // Fallback: match by name or return first active user with role 'user'
         targetEmployee = db.prepare("SELECT id, name, email, role, department, avatar, active FROM users WHERE role = 'user' AND active = 1 LIMIT 1").get();
       }
       if (!targetEmployee) {
@@ -712,7 +729,6 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
       }
       assignedUserId = targetEmployee.id;
     } else {
-      // Normal employee booking for themselves
       assignedUserId = callerUser.id;
     }
 
@@ -722,6 +738,12 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
       ? targetEmployee.avatar
       : (callerUser.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80');
 
+    // Retrieve desk and room record from DB to determine exact office
+    const desk: any = deskId ? db.prepare('SELECT * FROM desks WHERE id = ?').get(deskId) : null;
+    const room: any = roomId ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId) : null;
+    const targetOfficeId = desk?.office_id || room?.office_id || officeId || 'global-port';
+    const officeName = targetOfficeId === 'siddhant' ? 'Siddhant Campus' : 'Global Port Campus';
+
     // ========================================================
     // BUSINESS RULE: STRICT 1 SEAT PER USER PER DAY
     // A user can book only one seat per day.
@@ -730,20 +752,21 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
     if (deskId) {
       for (const singleDate of requestedDates) {
         const existingUserDeskBooking = db.prepare(`
-          SELECT id, desk_id, desk_code, pod_name, start_time, end_time, booking_date 
+          SELECT id, desk_id, desk_code, pod_name, start_time, end_time, booking_date, office_id 
           FROM bookings 
           WHERE user_id = ? 
             AND booking_date = ? 
             AND status IN ('active', 'upcoming')
             AND desk_id IS NOT NULL
-        `).get(assignedUserId, singleDate) as { id: string; desk_id: string; desk_code: string; pod_name: string; start_time: string; end_time: string; booking_date: string } | undefined;
+        `).get(assignedUserId, singleDate) as { id: string; desk_id: string; desk_code: string; pod_name: string; start_time: string; end_time: string; booking_date: string; office_id?: string } | undefined;
 
         if (existingUserDeskBooking) {
           const seatName = existingUserDeskBooking.desk_code || existingUserDeskBooking.desk_id;
+          const campusNote = existingUserDeskBooking.office_id === 'siddhant' ? ' (Siddhant)' : ' (Global Port)';
           return res.status(409).json({
             error: isCallerAdminOrManager
-              ? `Rule Violation: ${effectiveName} already has Seat ${seatName} reserved on ${singleDate}. Limit: strictly 1 seat per user per day.`
-              : `Rule Violation: You already have Seat ${seatName} reserved on ${singleDate}. Limit: strictly 1 seat per user per day. Cancel your current reservation if you wish to choose a different seat.`,
+              ? `Rule Violation: ${effectiveName} already has Seat ${seatName}${campusNote} reserved on ${singleDate}. Limit: strictly 1 seat per user per day.`
+              : `Rule Violation: You already have Seat ${seatName}${campusNote} reserved on ${singleDate}. Limit: strictly 1 seat per user per day. Cancel your current reservation if you wish to choose a different seat.`,
             conflictDate: singleDate,
             conflictType: 'user_already_has_seat'
           });
@@ -787,9 +810,6 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
         }
       }
     }
-
-    const desk: any = deskId ? db.prepare('SELECT * FROM desks WHERE id = ?').get(deskId) : null;
-    const room: any = roomId ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId) : null;
 
     // Calculate duration hours for pricing
     const [sH, sM] = startTime.split(':').map(Number);
@@ -839,8 +859,8 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
 
       // 1. Insert Booking Record
       db.prepare(`
-        INSERT INTO bookings (id, user_id, desk_id, room_id, area_id, desk_code, pod_name, booking_date, duration, start_time, end_time, status, check_in_status, cost, teams_meeting_url, attendees)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, ?)
+        INSERT INTO bookings (id, user_id, desk_id, room_id, area_id, desk_code, pod_name, booking_date, duration, start_time, end_time, status, check_in_status, cost, teams_meeting_url, attendees, office_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, ?, ?)
       `).run(
         bookingId,
         assignedUserId,
@@ -855,7 +875,8 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
         endTime,
         costPerDay,
         teamsMeetingUrl,
-        attendeesJson
+        attendeesJson,
+        targetOfficeId
       );
 
       // 2. Insert Invited Attendees into booking_attendees junction table
@@ -874,8 +895,8 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
 
       // 3. Audit log
       const auditDetails = targetEmployee
-        ? `${callerRole.toUpperCase()} ${callerUser.name} allocated seat ${deskId || roomId} to employee ${targetEmployee.name} (${targetEmployee.department}) for ${currentBookingDate} (${startTime}-${endTime})`
-        : `Employee ${callerUser.name} reserved seat ${deskId || roomId} for ${currentBookingDate} (${startTime}-${endTime})`;
+        ? `${callerRole.toUpperCase()} ${callerUser.name} allocated seat ${deskId || roomId} in ${officeName} to employee ${targetEmployee.name} (${targetEmployee.department}) for ${currentBookingDate} (${startTime}-${endTime})`
+        : `Employee ${callerUser.name} reserved seat ${deskId || roomId} in ${officeName} for ${currentBookingDate} (${startTime}-${endTime})`;
 
       db.prepare(`
         INSERT INTO system_logs (event_type, user_id, details)
@@ -898,7 +919,7 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
             isRoom: Boolean(roomId),
             name: desk ? desk.pod_name : (room ? room.name : (deskId || 'Workstation')),
             code: desk ? desk.code : (room ? room.code : (deskId || 'DESK')),
-            areaId,
+            areaId: `${targetOfficeId === 'siddhant' ? 'Siddhant ' : 'Global Port '}${areaId}`,
             capacity: room ? room.capacity : undefined,
             amenities: room
               ? (typeof room.amenities === 'string' ? JSON.parse(room.amenities || '[]') : room.amenities)
@@ -926,6 +947,7 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
         deskId,
         roomId,
         areaId,
+        officeId: targetOfficeId,
         deskCode: desk ? desk.code : (room ? room.code : (deskId || 'DESK')),
         podName: desk ? desk.pod_name : (room ? room.name : (deskId || 'Workstation')),
         date: currentBookingDate,
@@ -966,17 +988,24 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
 
 app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
   expirePastBookings();
+  const officeId = req.query.officeId as string;
   try {
     const currentUserId = req.user!.id;
-    const bookings = db.prepare(`
+    let sql = `
       SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role,
              CASE WHEN b.user_id = ? THEN 1 ELSE 0 END as is_organizer
       FROM bookings b
       JOIN users u ON b.user_id = u.id
       WHERE (b.user_id = ? OR b.id IN (SELECT booking_id FROM booking_attendees WHERE user_id = ?))
         AND b.status != 'cancelled'
-      ORDER BY b.booking_date DESC, b.start_time DESC
-    `).all(currentUserId, currentUserId, currentUserId);
+    `;
+    const params: any[] = [currentUserId, currentUserId, currentUserId];
+    if (officeId && officeId !== 'all') {
+      sql += ' AND (b.office_id = ? OR b.office_id IS NULL)';
+      params.push(officeId);
+    }
+    sql += ' ORDER BY b.booking_date DESC, b.start_time DESC';
+    const bookings = db.prepare(sql).all(...params);
 
     const formatted = bookings.map((b: any) => {
       let attendees = [];
@@ -990,6 +1019,7 @@ app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
         deskId: b.desk_id,
         roomId: b.room_id,
         areaId: b.area_id,
+        officeId: b.office_id || 'global-port',
         deskCode: b.desk_code,
         podName: b.pod_name,
         date: b.booking_date,
@@ -1017,13 +1047,22 @@ app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
 app.get('/api/bookings/all', (req: Request, res: Response) => {
   expirePastBookings();
 
+  const officeId = req.query.officeId as string;
+
   try {
-    const bookings = db.prepare(`
+    let sql = `
       SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role, u.department
       FROM bookings b
       JOIN users u ON b.user_id = u.id
-      ORDER BY b.booking_date DESC, b.start_time DESC
-    `).all();
+    `;
+    const params: any[] = [];
+    if (officeId && officeId !== 'all') {
+      sql += ' WHERE (b.office_id = ? OR b.office_id IS NULL)';
+      params.push(officeId);
+    }
+    sql += ' ORDER BY b.booking_date DESC, b.start_time DESC';
+
+    const bookings = db.prepare(sql).all(...params);
 
     res.json(bookings.map((b: any) => {
       let attendees = [];
@@ -1037,6 +1076,7 @@ app.get('/api/bookings/all', (req: Request, res: Response) => {
         deskId: b.desk_id,
         roomId: b.room_id,
         areaId: b.area_id,
+        officeId: b.office_id || 'global-port',
         deskCode: b.desk_code,
         podName: b.pod_name,
         date: b.booking_date,
@@ -1406,14 +1446,26 @@ app.delete('/api/admin/users/:id', authenticateToken, (req: AuthRequest, res) =>
 // 5. ANALYTICS & HEALTH TELEMETRY
 // ========================================================
 app.get('/api/analytics', authenticateToken, (req: AuthRequest, res) => {
+  const officeId = req.query.officeId as string || 'global-port';
   try {
-    const totalDesks = db.prepare('SELECT COUNT(*) as count FROM desks').get() as { count: number };
-    const occupiedDesks = db.prepare(`SELECT COUNT(*) as count FROM bookings WHERE status = 'active'`).get() as { count: number };
+    let totalDesksQuery = 'SELECT COUNT(*) as count FROM desks';
+    let occupiedDesksQuery = "SELECT COUNT(*) as count FROM bookings WHERE status = 'active'";
+    const params: any[] = [];
+
+    if (officeId && officeId !== 'all') {
+      totalDesksQuery += ' WHERE office_id = ?';
+      occupiedDesksQuery += ' AND (office_id = ? OR office_id IS NULL)';
+      params.push(officeId);
+    }
+
+    const totalDesks = db.prepare(totalDesksQuery).get(...params) as { count: number };
+    const occupiedDesks = db.prepare(occupiedDesksQuery).get(...params) as { count: number };
 
     res.json({
       totalDesks: totalDesks.count,
       occupiedDesks: occupiedDesks.count,
-      occupancyRate: Math.round((occupiedDesks.count / totalDesks.count) * 100),
+      occupancyRate: totalDesks.count > 0 ? Math.round((occupiedDesks.count / totalDesks.count) * 100) : 0,
+      officeId,
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
@@ -1423,14 +1475,25 @@ app.get('/api/analytics', authenticateToken, (req: AuthRequest, res) => {
 
 // Manager Workplace Reports Summary
 app.get('/api/reports/summary', (req: Request, res: Response) => {
+  const officeId = req.query.officeId as string || 'global-port';
   try {
     expirePastBookings();
 
-    const totalDesks = (db.prepare('SELECT COUNT(*) as count FROM desks').get() as any).count;
-    const occupiedDesks = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active'").get() as any).count;
-    const checkedInCount = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active' AND check_in_status = 1").get() as any).count;
-    const pendingCheckInCount = occupiedDesks - checkedInCount;
+    let totalDesks = 0;
+    let occupiedDesks = 0;
+    let checkedInCount = 0;
 
+    if (officeId && officeId !== 'all') {
+      totalDesks = (db.prepare('SELECT COUNT(*) as count FROM desks WHERE office_id = ?').get(officeId) as any).count;
+      occupiedDesks = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active' AND (office_id = ? OR office_id IS NULL)").get(officeId) as any).count;
+      checkedInCount = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active' AND check_in_status = 1 AND (office_id = ? OR office_id IS NULL)").get(officeId) as any).count;
+    } else {
+      totalDesks = (db.prepare('SELECT COUNT(*) as count FROM desks').get() as any).count;
+      occupiedDesks = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active'").get() as any).count;
+      checkedInCount = (db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'active' AND check_in_status = 1").get() as any).count;
+    }
+
+    const pendingCheckInCount = occupiedDesks - checkedInCount;
     const totalUsers = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
     const activeEmployees = (db.prepare("SELECT COUNT(*) as count FROM users WHERE active = 1 AND role = 'user'").get() as any).count;
 
@@ -1439,7 +1502,7 @@ app.get('/api/reports/summary', (req: Request, res: Response) => {
       SELECT 
         u.department,
         COUNT(DISTINCT u.id) as total_employees,
-        COUNT(DISTINCT CASE WHEN b.status = 'active' THEN b.id END) as active_bookings
+        COUNT(DISTINCT CASE WHEN b.status = 'active' ${officeId && officeId !== 'all' ? "AND (b.office_id = '" + officeId + "' OR b.office_id IS NULL)" : ''} THEN b.id END) as active_bookings
       FROM users u
       LEFT JOIN bookings b ON u.id = b.user_id AND b.status = 'active'
       GROUP BY u.department
@@ -1457,10 +1520,11 @@ app.get('/api/reports/summary', (req: Request, res: Response) => {
     }));
 
     res.json({
+      officeId,
       totalDesks,
       occupiedDesks,
       availableDesks: totalDesks - occupiedDesks,
-      overallOccupancyRate: Math.round((occupiedDesks / (totalDesks || 1)) * 100),
+      overallOccupancyRate: totalDesks > 0 ? Math.round((occupiedDesks / totalDesks) * 100) : 0,
       checkedInCount,
       pendingCheckInCount,
       checkInRatePct: occupiedDesks > 0 ? Math.round((checkedInCount / occupiedDesks) * 100) : 0,

@@ -1,5 +1,21 @@
 export type Role = 'user' | 'manager' | 'admin';
 
+export type OfficeLocation = 'global-port' | 'siddhant';
+
+export interface OfficeConfig {
+  id: OfficeLocation;
+  name: string;
+  campusName: string;
+  tagline: string;
+  badge: string;
+  address: string;
+  totalDesks: number;
+  totalRooms: number;
+  areas: Array<{ id: 'area-1' | 'area-2'; name: string; deskCount: number; label: string }>;
+  blueprintStatus: 'active' | 'pending';
+  blueprintNotice: string;
+}
+
 export type DeskStatus = 'available' | 'selected' | 'booked' | 'hold';
 
 export type DeskOrientation = 'facing-left' | 'facing-right' | 'facing-up' | 'facing-down';
@@ -13,9 +29,10 @@ export interface Occupant {
 }
 
 export interface Desk {
-  id: string;              // e.g. "WA1-LW-01", "WA1-BP1-01"
-  code: string;            // Display code e.g. "01", "14", "N1"
+  id: string;              // e.g. "WA1-LW-01", "SID-WA1-01"
+  code: string;            // Display code e.g. "01", "14", "N1", "S1"
   areaId: 'area-1' | 'area-2';
+  officeId?: OfficeLocation;
   zoneName: string;        // "Zone A // North Collaboration", "Zone C // Central Modular", etc.
   podName: string;         // "Left Perimeter Wall", "Pod 1 (South)", etc.
   row: number;
@@ -32,6 +49,7 @@ export interface Room {
   code: string;
   name: string;
   areaId: 'area-1' | 'area-2';
+  officeId?: OfficeLocation;
   capacity: number;
   status: 'available' | 'occupied' | 'reserved';
   amenities: string[];
@@ -44,6 +62,7 @@ export interface Booking {
   deskId: string;
   roomId?: string;
   areaId: 'area-1' | 'area-2';
+  officeId?: OfficeLocation;
   deskCode: string;
   podName: string;
   date: string;
