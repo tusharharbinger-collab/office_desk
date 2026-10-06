@@ -12,6 +12,7 @@ interface SidebarProps {
   selectedOffice?: OfficeLocation;
   onOpenOfficeModal?: () => void;
   onLogout?: () => void;
+  onNavigateLanding?: () => void;
   onCollapse?: () => void;
 }
 
@@ -24,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedOffice = 'global-port',
   onOpenOfficeModal,
   onLogout,
+  onNavigateLanding,
   onCollapse
 }) => {
   const handleTabClick = (tab: ActiveTab) => {
@@ -53,9 +55,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className="w-full">
         <div
-          onClick={() => handleTabClick('floor-plan')}
+          onClick={() => onNavigateLanding ? onNavigateLanding() : handleTabClick('floor-plan')}
           className="w-full cursor-pointer group mb-5"
-          title="Harbinger Group • SmartDesk Workspace OS"
+          title="SmartDesk Workplace OS • Click to view Landing Page"
         >
           {isCollapsed ? (
             <div className="w-10 h-10 mx-auto rounded-xl bg-white p-1.5 flex items-center justify-center shadow-lg group-hover:scale-105 transition-all overflow-hidden border border-white/20">
@@ -133,6 +135,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation Tabs */}
         <nav className="space-y-1 w-full">
+          {/* Landing Page Home Link */}
+          {onNavigateLanding && (
+            <button
+              onClick={onNavigateLanding}
+              title="Landing Page / Home"
+              className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
+              } text-slate-400 hover:text-sky-300 hover:bg-white/[0.04] border border-transparent mb-1`}
+            >
+              <span className={`material-symbols-outlined text-[19px] ${!isCollapsed ? 'mr-3' : ''}`}>
+                home
+              </span>
+              {!isCollapsed && <span>Landing Page</span>}
+            </button>
+          )}
+
           {/* Floor Plan */}
           <button
             onClick={() => handleTabClick('floor-plan')}

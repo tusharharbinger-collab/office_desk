@@ -4,13 +4,13 @@ const BASE_URL = '/api';
 
 function getAuthHeader(): Record<string, string> {
   const headers: Record<string, string> = {};
-  const token = localStorage.getItem('smartdesk_token');
+  const token = localStorage.getItem('smartdesk_token') || sessionStorage.getItem('smartdesk_token');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const userId = localStorage.getItem('smartdesk_user_id');
-  const userEmail = localStorage.getItem('smartdesk_user_email');
-  const userRole = localStorage.getItem('smartdesk_user_role');
+  const userId = localStorage.getItem('smartdesk_user_id') || sessionStorage.getItem('smartdesk_user_id');
+  const userEmail = localStorage.getItem('smartdesk_user_email') || sessionStorage.getItem('smartdesk_user_email');
+  const userRole = localStorage.getItem('smartdesk_user_role') || sessionStorage.getItem('smartdesk_user_role');
   if (userId) headers['X-User-Id'] = userId;
   if (userEmail) headers['X-User-Email'] = userEmail;
   if (userRole) headers['X-User-Role'] = userRole;
@@ -28,10 +28,14 @@ export const api = {
     const data = await res.json();
     if (res.ok && data.token) {
       localStorage.setItem('smartdesk_token', data.token);
+      sessionStorage.setItem('smartdesk_token', data.token);
       if (data.user) {
         localStorage.setItem('smartdesk_user_id', data.user.id);
         localStorage.setItem('smartdesk_user_email', data.user.email);
         localStorage.setItem('smartdesk_user_role', data.user.role);
+        sessionStorage.setItem('smartdesk_user_id', data.user.id);
+        sessionStorage.setItem('smartdesk_user_email', data.user.email);
+        sessionStorage.setItem('smartdesk_user_role', data.user.role);
       }
     }
     return data;
@@ -47,10 +51,14 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Login failed');
     localStorage.setItem('smartdesk_token', data.token);
+    sessionStorage.setItem('smartdesk_token', data.token);
     if (data.user) {
       localStorage.setItem('smartdesk_user_id', data.user.id);
       localStorage.setItem('smartdesk_user_email', data.user.email);
       localStorage.setItem('smartdesk_user_role', data.user.role);
+      sessionStorage.setItem('smartdesk_user_id', data.user.id);
+      sessionStorage.setItem('smartdesk_user_email', data.user.email);
+      sessionStorage.setItem('smartdesk_user_role', data.user.role);
     }
     return data;
   },
@@ -69,17 +77,21 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');
     localStorage.setItem('smartdesk_token', data.token);
+    sessionStorage.setItem('smartdesk_token', data.token);
     return data;
   },
 
   async getMe(): Promise<UserProfile | null> {
-    const token = localStorage.getItem('smartdesk_token');
+    const token = localStorage.getItem('smartdesk_token') || sessionStorage.getItem('smartdesk_token');
     if (!token) return null;
     try {
       const res = await fetch(`${BASE_URL}/auth/me`, {
         headers: getAuthHeader()
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        api.logout();
+        return null;
+      }
       const data = await res.json();
       return data.user;
     } catch {
@@ -89,6 +101,15 @@ export const api = {
 
   logout() {
     localStorage.removeItem('smartdesk_token');
+    localStorage.removeItem('smartdesk_user_id');
+    localStorage.removeItem('smartdesk_user_email');
+    localStorage.removeItem('smartdesk_user_role');
+    sessionStorage.removeItem('smartdesk_token');
+    sessionStorage.removeItem('smartdesk_user_id');
+    sessionStorage.removeItem('smartdesk_user_email');
+    sessionStorage.removeItem('smartdesk_user_role');
+    sessionStorage.removeItem('smartdesk_active_session');
+    sessionStorage.removeItem('smartdesk_office_chosen');
   },
 
   // Microsoft Organization SSO

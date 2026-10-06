@@ -43,9 +43,11 @@ import { Avatar } from './components/Avatar';
 import { getTodayISODate } from './utils/dateTime';
 
 export const App: React.FC = () => {
-  // Authentication & View State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<UserProfile>(INITIAL_USERS[0]);
+  // Authentication & View State (Defaults to Landing Page unless active session was started)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return sessionStorage.getItem('smartdesk_active_session') === 'true';
+  });
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   // Office Campus Location State (Global Port vs Siddhant)
   const [selectedOffice, setSelectedOffice] = useState<OfficeLocation>(() => {
@@ -173,12 +175,20 @@ export const App: React.FC = () => {
           }
         }
 
-        const me = await api.getMe();
-        if (me) {
-          setCurrentUser(me);
-          setIsAuthenticated(true);
-          if (sessionStorage.getItem('smartdesk_office_chosen') !== 'true') {
-            setShowOfficeModal(true);
+        let me: UserProfile | null = null;
+        const hasActiveSession = sessionStorage.getItem('smartdesk_active_session') === 'true';
+        if (hasActiveSession) {
+          me = await api.getMe();
+          if (me) {
+            setCurrentUser(me);
+            setIsAuthenticated(true);
+            if (sessionStorage.getItem('smartdesk_office_chosen') !== 'true') {
+              setShowOfficeModal(true);
+            }
+          } else {
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            sessionStorage.removeItem('smartdesk_active_session');
           }
         }
 
@@ -297,14 +307,18 @@ export const App: React.FC = () => {
 
   // Ensure token is synced with active currentUser so bookings never fail with token errors
   useEffect(() => {
-    if (currentUser) {
+    if (isAuthenticated && currentUser) {
       localStorage.setItem('smartdesk_user_id', currentUser.id);
       localStorage.setItem('smartdesk_user_email', currentUser.email);
       localStorage.setItem('smartdesk_user_role', currentUser.role);
+      sessionStorage.setItem('smartdesk_user_id', currentUser.id);
+      sessionStorage.setItem('smartdesk_user_email', currentUser.email);
+      sessionStorage.setItem('smartdesk_user_role', currentUser.role);
+      sessionStorage.setItem('smartdesk_active_session', 'true');
       api.getTokenForUser({ id: currentUser.id, email: currentUser.email, role: currentUser.role })
         .catch(() => {});
     }
-  }, [currentUser]);
+  }, [isAuthenticated, currentUser]);
 
   // Quick Demo Login from Landing Page
   const handleQuickDemoLogin = async (role: 'admin' | 'manager' | 'employee') => {
@@ -317,6 +331,7 @@ export const App: React.FC = () => {
       if (res && res.user) user = res.user;
     } catch {}
 
+    sessionStorage.setItem('smartdesk_active_session', 'true');
     setCurrentUser(user);
     if (user.role === 'admin' || user.role === 'manager') {
       setSelectedTargetUser(null);
@@ -332,6 +347,7 @@ export const App: React.FC = () => {
 
   // Auth Success Handlers
   const handleAuthSuccess = (user: UserProfile) => {
+    sessionStorage.setItem('smartdesk_active_session', 'true');
     setCurrentUser(user);
     if (user.role === 'admin' || user.role === 'manager') {
       setSelectedTargetUser(null);
@@ -347,6 +363,7 @@ export const App: React.FC = () => {
 
   const handleLogout = () => {
     api.logout();
+    setCurrentUser(null);
     setIsAuthenticated(false);
     showToast('Signed out of SmartDesk');
   };
@@ -373,7 +390,7 @@ export const App: React.FC = () => {
     endTime?: string;
     targetUser?: UserProfile | null;
   }) => {
-    if (!selectedDesk) return;
+    if (!selectedDesk || !currentUser) return;
 
     const isAdminOrManager = currentUser.role === 'admin' || currentUser.role === 'manager';
     const effectiveUser = customParams?.targetUser || (isAdminOrManager ? selectedTargetUser : currentUser);
@@ -605,6 +622,7 @@ export const App: React.FC = () => {
     attendeeIds?: string[],
     includeTeams?: boolean
   ) => {
+    if (!currentUser) return;
     try {
       await api.createBooking({
         roomId: room.id,
@@ -643,8 +661,8 @@ export const App: React.FC = () => {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
       );
-      if (currentUser.id === userId) {
-        setCurrentUser((prev) => ({ ...prev, role: newRole }));
+      if (currentUser && currentUser.id === userId) {
+        setCurrentUser((prev) => (prev ? { ...prev, role: newRole } : null));
       }
       showToast(`Role updated in SQLite database.`);
     } catch (err: any) {
@@ -686,8 +704,8 @@ export const App: React.FC = () => {
     }).catch((err) => showToast(err.message));
   };
 
-  // If unauthenticated, show the Landing Page!
-  if (!isAuthenticated) {
+  // If unauthenticated or no current user, show the Landing Page!
+  if (!isAuthenticated || !currentUser) {
     return (
       <>
         <LandingPage
@@ -699,6 +717,8 @@ export const App: React.FC = () => {
             setActiveArea(area);
             handleQuickDemoLogin('employee');
           }}
+          currentUser={currentUser}
+          onGoToDashboard={() => setIsAuthenticated(true)}
         />
 
         <LoginModal
@@ -756,6 +776,7 @@ export const App: React.FC = () => {
         selectedOffice={selectedOffice}
         onOpenOfficeModal={() => setShowOfficeModal(true)}
         onLogout={handleLogout}
+        onNavigateLanding={() => setIsAuthenticated(false)}
         onCollapse={() => setIsSidebarCollapsed(true)}
       />
 

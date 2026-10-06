@@ -61,7 +61,7 @@ function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) 
   }
 
   // Fallback 2: Check callerUserId, userId, email in request body or query
-  const bodyUser = (req.body && (req.body.callerUserId || req.body.userId || req.body.email)) ||
+  const bodyUser = (req.body && (req.body.callerUserId || req.body.userId)) ||
                    (req.query && (req.query.userId || req.query.email));
   if (bodyUser) {
     const user: any = db.prepare('SELECT id, email, role, name, active FROM users WHERE id = ? OR email = ?')
@@ -70,25 +70,6 @@ function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) 
       req.user = { id: user.id, email: user.email, role: user.role, name: user.name };
       return next();
     }
-  }
-
-  // Fallback 3: If header specifies a role, match an active user of that role
-  if (headerUserRole) {
-    const user: any = db.prepare('SELECT id, email, role, name, active FROM users WHERE role = ? AND active = 1 LIMIT 1')
-      .get(headerUserRole);
-    if (user) {
-      req.user = { id: user.id, email: user.email, role: user.role, name: user.name };
-      return next();
-    }
-  }
-
-  // Fallback 4: Default active user in database so legitimate users are never locked out
-  const defaultUser: any = db.prepare("SELECT id, email, role, name FROM users WHERE role = 'user' AND active = 1 LIMIT 1").get()
-    || db.prepare("SELECT id, email, role, name FROM users LIMIT 1").get();
-
-  if (defaultUser) {
-    req.user = { id: defaultUser.id, email: defaultUser.email, role: defaultUser.role, name: defaultUser.name };
-    return next();
   }
 
   return res.status(401).json({ error: 'Access token required' });

@@ -6,6 +6,8 @@ interface LandingPageProps {
   onQuickDemoLogin: (role: 'admin' | 'manager' | 'employee') => void;
   onOpenMicrosoftSSO: () => void;
   onExploreArea?: (area: 'area-1' | 'area-2') => void;
+  currentUser?: { name: string; role: string } | null;
+  onGoToDashboard?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -13,7 +15,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenSignUp,
   onQuickDemoLogin,
   onOpenMicrosoftSSO,
-  onExploreArea
+  onExploreArea,
+  currentUser,
+  onGoToDashboard
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -119,20 +123,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Right Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
-            <button
-              onClick={onOpenLogin}
-              className="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.08] border border-white/10 transition-all cursor-pointer active:scale-95"
-            >
-              Sign In
-            </button>
+            {currentUser && onGoToDashboard ? (
+              <button
+                onClick={onGoToDashboard}
+                className="px-6 py-2.5 rounded-full text-xs font-bold bg-gradient-to-r from-primary via-sky-400 to-secondary hover:brightness-110 text-slate-950 shadow-[0_0_22px_rgba(14,165,233,0.4)] transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+              >
+                <span>Go to Workspace ({currentUser.name})</span>
+                <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={onOpenLogin}
+                  className="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.08] border border-white/10 transition-all cursor-pointer active:scale-95"
+                >
+                  Sign In
+                </button>
 
-            <button
-              onClick={handleGetStarted}
-              className="px-6 py-2.5 rounded-full text-xs font-bold bg-gradient-to-r from-primary via-sky-400 to-secondary hover:brightness-110 text-slate-950 shadow-[0_0_22px_rgba(14,165,233,0.4)] transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
-            >
-              <span>Book a Desk</span>
-              <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
-            </button>
+                <button
+                  onClick={handleGetStarted}
+                  className="px-6 py-2.5 rounded-full text-xs font-bold bg-gradient-to-r from-primary via-sky-400 to-secondary hover:brightness-110 text-slate-950 shadow-[0_0_22px_rgba(14,165,233,0.4)] transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+                >
+                  <span>Book a Desk</span>
+                  <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu toggle */}
