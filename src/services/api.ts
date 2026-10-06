@@ -1,6 +1,7 @@
 import { Desk, Room, Booking, UserProfile, Role, EmailNotification, OfficeLocation } from '../types';
 
-const BASE_URL = '/api';
+const envApiUrl = (import.meta as any).env?.VITE_API_URL;
+const BASE_URL = envApiUrl ? `${envApiUrl.replace(/\/$/, '')}/api` : '/api';
 
 function getAuthHeader(): Record<string, string> {
   const headers: Record<string, string> = {};

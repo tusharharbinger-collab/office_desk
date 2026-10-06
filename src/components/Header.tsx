@@ -47,6 +47,7 @@ interface HeaderProps {
   onTabChange?: (tab: any) => void;
   onOpenOutlookEmails?: () => void;
   emailCount?: number;
+  onOpenMobileView?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -77,7 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onTabChange,
   onOpenOutlookEmails,
-  emailCount
+  emailCount,
+  onOpenMobileView
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [dateTimeOpen, setDateTimeOpen] = useState(false);
@@ -612,6 +614,18 @@ export const Header: React.FC<HeaderProps> = ({
                 {emailCount}
               </span>
             )}
+          </button>
+        )}
+
+        {/* Mobile User App Web View Button */}
+        {onOpenMobileView && (
+          <button
+            onClick={onOpenMobileView}
+            className="inline-flex items-center gap-2 h-9 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-sky-500/20 to-blue-600/20 hover:from-sky-500/30 hover:to-blue-600/30 border border-sky-400/40 text-sky-300 hover:text-white text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shadow-md group"
+            title="Preview Mobile User App WebView on Web"
+          >
+            <span className="material-symbols-outlined text-sm text-sky-400 group-hover:scale-110 transition-transform">smartphone</span>
+            <span className="hidden lg:inline">Mobile View</span>
           </button>
         )}
 

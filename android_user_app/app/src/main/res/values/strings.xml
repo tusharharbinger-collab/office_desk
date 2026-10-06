@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SmartDesk User</string>
+    <string name="app_title">SmartDesk Employee Portal</string>
+    <string name="user_mode_tag">User Mode</string>
+    <string name="server_settings">Server Settings</string>
+    <string name="enter_server_url">Enter Web App Server URL:</string>
+    <string name="default_url">http://10.0.2.2:5173</string>
+    <string name="btn_save">Save &amp; Reload</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="offline_title">No Internet Connection</string>
+    <string name="offline_message">Unable to connect to SmartDesk portal. Please check your network connection or server URL settings.</string>
+    <string name="btn_retry">Retry Connection</string>
+    <string name="btn_configure_server">Configure Server</string>
+</resources>

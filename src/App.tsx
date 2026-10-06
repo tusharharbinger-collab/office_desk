@@ -39,6 +39,7 @@ import { MeetingRoomsModal } from './components/MeetingRoomsModal';
 import { MicrosoftSSOModal } from './components/MicrosoftSSOModal';
 import { OutlookEmailsModal } from './components/OutlookEmailsModal';
 import { OfficeSelectionModal } from './components/OfficeSelectionModal';
+import { MobileAppPreviewModal } from './components/MobileAppPreviewModal';
 import { Avatar } from './components/Avatar';
 import { getTodayISODate } from './utils/dateTime';
 
@@ -48,6 +49,9 @@ export const App: React.FC = () => {
     return sessionStorage.getItem('smartdesk_active_session') === 'true';
   });
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
+  // Mobile App Web View Preview State
+  const [showMobileViewModal, setShowMobileViewModal] = useState<boolean>(false);
 
   // Office Campus Location State (Global Port vs Siddhant)
   const [selectedOffice, setSelectedOffice] = useState<OfficeLocation>(() => {
@@ -848,6 +852,7 @@ export const App: React.FC = () => {
           onLogout={handleLogout}
           onOpenOutlookEmails={() => setShowOutlookEmailsModal(true)}
           emailCount={outlookEmailsCount}
+          onOpenMobileView={() => setShowMobileViewModal(true)}
         />
 
         {/* Central Content Viewport: Page Router for Sidebar Navigation */}
@@ -1094,6 +1099,13 @@ export const App: React.FC = () => {
         onSelectOffice={handleSelectOffice}
         onClose={() => setShowOfficeModal(false)}
         canDismiss={true}
+      />
+
+      {/* Mobile User App Web View Simulator Modal */}
+      <MobileAppPreviewModal
+        isOpen={showMobileViewModal}
+        onClose={() => setShowMobileViewModal(false)}
+        currentUser={currentUser}
       />
     </div>
   );
