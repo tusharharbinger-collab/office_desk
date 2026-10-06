@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val PREFS_NAME = "SmartDeskUserPrefs"
     private val KEY_SERVER_URL = "server_url"
-    private val DEFAULT_URL = "http://10.0.2.2:5173" // Default target URL for Android Emulator to host
+    private val DEFAULT_URL = "https://office-desk-iota.vercel.app" // Production Vercel App URL
 
     private var currentTargetUrl: String = DEFAULT_URL
 

@@ -5,7 +5,7 @@
     <string name="user_mode_tag">User Mode</string>
     <string name="server_settings">Server Settings</string>
     <string name="enter_server_url">Enter Web App Server URL:</string>
-    <string name="default_url">http://10.0.2.2:5173</string>
+    <string name="default_url">https://office-desk-iota.vercel.app</string>
     <string name="btn_save">Save &amp; Reload</string>
     <string name="btn_cancel">Cancel</string>
     <string name="offline_title">No Internet Connection</string>
