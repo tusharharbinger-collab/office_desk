@@ -2,6 +2,23 @@ export type Role = 'user' | 'manager' | 'admin';
 
 export type OfficeLocation = 'global-port' | 'siddhant';
 
+export type SiddhantFloorId =
+  | 'finance_legal'
+  | '2nd_floor_a_wing'
+  | '2nd_floor_b_wing'
+  | '3rd_floor_a_wing'
+  | '3rd_floor_b_wing'
+  | 'ground_b';
+
+export interface SiddhantFloorConfig {
+  id: SiddhantFloorId;
+  name: string;
+  pdfFileName: string;
+  imagePath: string;
+  deskCount: number;
+  badge: string;
+}
+
 export interface OfficeConfig {
   id: OfficeLocation;
   name: string;
@@ -12,6 +29,7 @@ export interface OfficeConfig {
   totalDesks: number;
   totalRooms: number;
   areas: Array<{ id: 'area-1' | 'area-2'; name: string; deskCount: number; label: string }>;
+  siddhantFloors?: SiddhantFloorConfig[];
   blueprintStatus: 'active' | 'pending';
   blueprintNotice: string;
 }

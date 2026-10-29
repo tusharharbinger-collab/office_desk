@@ -20,18 +20,68 @@ export const OFFICES: Record<OfficeLocation, OfficeConfig> = {
   'siddhant': {
     id: 'siddhant',
     name: 'Siddhant',
-    campusName: 'Siddhant Business Center',
-    tagline: 'Modern Modular Collaboration Campus',
+    campusName: 'Siddhant Corporate Center',
+    tagline: 'Multi-Floor Architectural Campus',
     badge: 'New Campus',
-    address: 'Siddhant Corporate Towers, Floor 3 & 4',
-    totalDesks: 120,
-    totalRooms: 4,
+    address: 'Bhusari Colony, Paud Road, Pune',
+    totalDesks: 156,
+    totalRooms: 6,
     areas: [
-      { id: 'area-1', name: 'Work Area 1', deskCount: 80, label: 'Area 1 (80 Seats)' },
-      { id: 'area-2', name: 'Work Area 2', deskCount: 40, label: 'Area 2 (40 Seats)' }
+      { id: 'area-1', name: 'Work Area 1', deskCount: 96, label: 'Area 1 (96 Seats)' },
+      { id: 'area-2', name: 'Work Area 2', deskCount: 60, label: 'Area 2 (60 Seats)' }
     ],
-    blueprintStatus: 'pending',
-    blueprintNotice: 'Floor Plan Blueprint Awaiting Architectural Import • Interactive Pod Grid Live'
+    siddhantFloors: [
+      {
+        id: 'finance_legal',
+        name: 'Finance & Legal Floor',
+        pdfFileName: 'CON 01_R05_Finance and Legal_.pdf',
+        imagePath: '/floormaps/finance_legal.png',
+        deskCount: 26,
+        badge: 'Executive & Finance'
+      },
+      {
+        id: '2nd_floor_a_wing',
+        name: '2nd Floor A Wing',
+        pdfFileName: 'Harbinger_Siddhant_2A.pdf',
+        imagePath: '/floormaps/2nd_floor_a_wing.png',
+        deskCount: 30,
+        badge: 'Wing A'
+      },
+      {
+        id: '2nd_floor_b_wing',
+        name: '2nd Floor B Wing',
+        pdfFileName: 'Harbinger_Siddhant_2B.pdf',
+        imagePath: '/floormaps/2nd_floor_b_wing.png',
+        deskCount: 35,
+        badge: 'Wing B'
+      },
+      {
+        id: '3rd_floor_a_wing',
+        name: '3rd Floor A Wing',
+        pdfFileName: 'Harbinger_Siddhant_3A.pdf',
+        imagePath: '/floormaps/3rd_floor_a_wing.png',
+        deskCount: 28,
+        badge: 'Wing A'
+      },
+      {
+        id: '3rd_floor_b_wing',
+        name: '3rd Floor B Wing',
+        pdfFileName: 'Harbinger_Siddhant_3A.pdf',
+        imagePath: '/floormaps/3rd_floor_a_wing.png',
+        deskCount: 22,
+        badge: 'Wing B'
+      },
+      {
+        id: 'ground_b',
+        name: 'Ground Floor B Wing',
+        pdfFileName: 'Harbinger_Siddhant_Ground_B.pdf',
+        imagePath: '/floormaps/ground_b.png',
+        deskCount: 15,
+        badge: 'Ground Wing B'
+      }
+    ],
+    blueprintStatus: 'active',
+    blueprintNotice: 'Full Architectural CAD Floor Maps Active • Select floor wing from dropdown'
   }
 };
 
