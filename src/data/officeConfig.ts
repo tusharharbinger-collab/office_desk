@@ -32,51 +32,43 @@ export const OFFICES: Record<OfficeLocation, OfficeConfig> = {
     ],
     siddhantFloors: [
       {
-        id: 'finance_legal',
-        name: 'Finance & Legal Floor',
+        id: 'legal_finance',
+        name: 'Legal Finance',
         pdfFileName: 'CON 01_R05_Finance and Legal_.pdf',
         imagePath: '/floormaps/finance_legal.png',
-        deskCount: 26,
+        deskCount: 14,
         badge: 'Executive & Finance'
       },
       {
-        id: '2nd_floor_a_wing',
-        name: '2nd Floor A Wing',
+        id: 'floor_2a',
+        name: 'Floor 2A',
         pdfFileName: 'Harbinger_Siddhant_2A.pdf',
         imagePath: '/floormaps/2nd_floor_a_wing.png',
-        deskCount: 30,
+        deskCount: 22,
         badge: 'Wing A'
       },
       {
-        id: '2nd_floor_b_wing',
-        name: '2nd Floor B Wing',
+        id: 'floor_2b',
+        name: 'Floor 2B',
         pdfFileName: 'Harbinger_Siddhant_2B.pdf',
         imagePath: '/floormaps/2nd_floor_b_wing.png',
         deskCount: 35,
         badge: 'Wing B'
       },
       {
-        id: '3rd_floor_a_wing',
-        name: '3rd Floor A Wing',
+        id: 'floor_3a',
+        name: 'Floor 3A',
         pdfFileName: 'Harbinger_Siddhant_3A.pdf',
         imagePath: '/floormaps/3rd_floor_a_wing.png',
-        deskCount: 28,
+        deskCount: 25,
         badge: 'Wing A'
       },
       {
-        id: '3rd_floor_b_wing',
-        name: '3rd Floor B Wing',
-        pdfFileName: 'Harbinger_Siddhant_3A.pdf',
-        imagePath: '/floormaps/3rd_floor_a_wing.png',
-        deskCount: 22,
-        badge: 'Wing B'
-      },
-      {
         id: 'ground_b',
-        name: 'Ground Floor B Wing',
+        name: 'Ground B',
         pdfFileName: 'Harbinger_Siddhant_Ground_B.pdf',
         imagePath: '/floormaps/ground_b.png',
-        deskCount: 15,
+        deskCount: 14,
         badge: 'Ground Wing B'
       }
     ],

@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Desk, Room, SiddhantFloorId } from '../types';
 import { OFFICES } from '../data/officeConfig';
-import { DeskNode } from './DeskNode';
+import { LegalFinanceMap } from './LegalFinanceMap';
+import { Floor2AMap } from './Floor2AMap';
+import { Floor2BMap } from './Floor2BMap';
+import { Floor3AMap } from './Floor3AMap';
+import { GroundBMap } from './GroundBMap';
 
 interface SiddhantWorkAreaMapProps {
   activeArea: 'area-1' | 'area-2';
@@ -26,310 +30,220 @@ export const SiddhantWorkAreaMap: React.FC<SiddhantWorkAreaMapProps> = React.mem
   onLeaveDesk,
   onSelectRoom
 }) => {
-  // Selected floor state (Defaults to Finance & Legal)
-  const [selectedFloorId, setSelectedFloorId] = useState<SiddhantFloorId>('finance_legal');
-  const [floorDropdownOpen, setFloorDropdownOpen] = useState<boolean>(false);
+  // 5 Floor Map IDs corresponding exactly to: Legal Finance, Floor 2A, Floor 2B, Floor 3A, Ground B
+  const [selectedFloorId, setSelectedFloorId] = useState<SiddhantFloorId>('legal_finance');
+  const [viewMode, setViewMode] = useState<'blueprint' | 'original'>('original');
+  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
 
-  // Available floor maps list
-  const siddhantFloors = OFFICES.siddhant.siddhantFloors || [];
-  const currentFloor = useMemo(() => {
-    return siddhantFloors.find((f) => f.id === selectedFloorId) || siddhantFloors[0];
-  }, [siddhantFloors, selectedFloorId]);
+  const rotateMap = () => {
+    setRotation((prev) => ((prev + 90) % 360) as 0 | 90 | 180 | 270);
+  };
 
-  // Memoized desk map for O(1) lookup
-  const deskMap = useMemo(() => new Map(desks.map((d) => [d.id, d])), [desks]);
-  const getDesk = (id: string) => deskMap.get(id);
+  // Normalized floor mapping (handles backward-compatibility IDs)
+  const normalizedFloorId = useMemo(() => {
+    if (selectedFloorId === 'finance_legal') return 'legal_finance';
+    if (selectedFloorId === '2nd_floor_a_wing') return 'floor_2a';
+    if (selectedFloorId === '2nd_floor_b_wing') return 'floor_2b';
+    if (selectedFloorId === '3rd_floor_a_wing' || selectedFloorId === '3rd_floor_b_wing') return 'floor_3a';
+    return selectedFloorId;
+  }, [selectedFloorId]);
 
-  // Filter meeting rooms for this area
-  const areaRooms = useMemo(() => rooms.filter((r) => r.areaId === activeArea), [rooms, activeArea]);
+  const floorMeta = {
+    legal_finance: {
+      name: 'Legal Finance',
+      badge: '14 Seats',
+      desc: '5 Executive Cabins • 2 Cubicles • 6-Desk Modular Pod'
+    },
+    floor_2a: {
+      name: 'Floor 2A',
+      badge: '22 Seats',
+      desc: '22 Workstations • 1 Collab Room • 1 IT Server Room'
+    },
+    floor_2b: {
+      name: 'Floor 2B',
+      badge: '35 Seats',
+      desc: '35 Modular Workstations • 1 Northwest Executive Cabin'
+    },
+    floor_3a: {
+      name: 'Floor 3A',
+      badge: '25 Seats',
+      desc: '25 Workstations • 1 Meeting Room • 2 Focus Pods • 1 Cabin'
+    },
+    ground_b: {
+      name: 'Ground B',
+      badge: '14 Seats',
+      desc: '14 Seats (Dimensional CAD Plan) • 5 Cabins • 2 Cubicles'
+    }
+  }[normalizedFloorId] || { name: 'Siddhant Floor', badge: '', desc: '' };
 
   return (
-    <div className="relative w-[1380px] h-[920px] bg-[#090D16] border border-slate-700/50 rounded-3xl p-6 shadow-2xl overflow-hidden select-none flex flex-col">
-      {/* High-tech Blueprint Grid Background matching Global Port */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-40"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0),
-            linear-gradient(to right, rgba(16, 185, 129, 0.04) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(16, 185, 129, 0.04) 1px, transparent 1px)
-          `,
-          backgroundSize: '24px 24px, 120px 120px, 120px 120px'
-        }}
-      />
-
-      {/* Precision CAD Corner Crosshairs */}
-      <div className="absolute top-3 left-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">┌ ┐</div>
-      <div className="absolute top-3 right-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">┌ ┐</div>
-      <div className="absolute bottom-3 left-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">└ ┘</div>
-      <div className="absolute bottom-3 right-3 text-slate-700 font-mono text-[10px] pointer-events-none select-none">└ ┘</div>
-
-      {/* Blueprint Architectural Stamp Header & Dropdown Chooser */}
-      <div className="absolute top-4 left-6 right-6 flex items-center justify-between select-none z-20">
+    <div className="flex flex-col items-center gap-2.5">
+      {/* ========================================================
+          SINGLE UNIFIED TOP TOOLBAR: NO DUPLICATE HEADERS
+          (Floor Switcher + Live Specs + Rotation + CAD Mode)
+         ======================================================== */}
+      <div className="w-[1380px] flex items-center justify-between px-3.5 py-2.5 bg-[#0c121e]/95 backdrop-blur-xl border border-slate-700/70 rounded-2xl shadow-xl z-20">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm shadow-emerald-500/10">
-            <span className="material-symbols-outlined text-lg">domain</span>
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-center text-emerald-400 flex-shrink-0">
+            <span className="material-symbols-outlined text-xl">domain</span>
           </div>
-          <div className="flex flex-col">
+          <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono font-bold text-white text-xs tracking-wider uppercase">
-                SIDDHANT CAMPUS // {currentFloor?.name.toUpperCase()}
+              <span className="text-xs font-mono font-black text-white tracking-wider uppercase">
+                SIDDHANT // {floorMeta.name.toUpperCase()}
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-                {currentFloor?.deskCount} WORKSTATIONS
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-slate-400 border border-white/[0.08]">
-                POD LAYOUT BLUEPRINT
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-bold">
+                {floorMeta.badge}
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5">
-              ARCHITECTURAL SEATING PLAN // {currentFloor?.pdfFileName}
-            </span>
+            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+              {floorMeta.desc}
+            </div>
           </div>
         </div>
 
-        {/* Floor Selection Dropdown Option */}
-        <div className="relative">
+        {/* 5 Separate Map Tabs */}
+        <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
+          {[
+            { id: 'legal_finance' as SiddhantFloorId, name: 'Legal Finance', icon: 'account_balance', badge: '14 Seats' },
+            { id: 'floor_2a' as SiddhantFloorId, name: 'Floor 2A', icon: 'layers', badge: '22 Seats' },
+            { id: 'floor_2b' as SiddhantFloorId, name: 'Floor 2B', icon: 'grid_view', badge: '35 Seats' },
+            { id: 'floor_3a' as SiddhantFloorId, name: 'Floor 3A', icon: 'apartment', badge: '25 Seats' },
+            { id: 'ground_b' as SiddhantFloorId, name: 'Ground B', icon: 'architecture', badge: '14 Seats' }
+          ].map((floor) => {
+            const isActive = normalizedFloorId === floor.id;
+            return (
+              <button
+                key={floor.id}
+                type="button"
+                onClick={() => setSelectedFloorId(floor.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-emerald-500 text-slate-950 border border-emerald-300 font-black shadow-md shadow-emerald-500/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent font-medium'
+                }`}
+              >
+                <span className={`material-symbols-outlined text-sm ${isActive ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
+                  {floor.icon}
+                </span>
+                <span>{floor.name}</span>
+                <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isActive ? 'bg-slate-950 text-emerald-300' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {floor.badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Unified Direction & View Mode Controls */}
+        <div className="flex items-center gap-2 font-mono text-xs">
           <button
             type="button"
-            onClick={() => setFloorDropdownOpen(!floorDropdownOpen)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-emerald-500/40 text-xs font-mono text-emerald-300 font-semibold transition-all cursor-pointer shadow-lg"
+            onClick={rotateMap}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-amber-500/50 text-amber-300 hover:bg-slate-800 transition-all cursor-pointer font-bold shadow-sm"
+            title="Rotate map direction by 90 degrees"
           >
-            <span className="material-symbols-outlined text-sm text-emerald-400">layers</span>
-            <span>Floor Wing: {currentFloor?.name}</span>
-            <span className="material-symbols-outlined text-xs text-slate-400">
-              {floorDropdownOpen ? 'expand_less' : 'expand_more'}
+            <span 
+              className="material-symbols-outlined text-sm transition-transform duration-300"
+              style={{ transform: `rotate(${rotation}deg)` }}
+            >
+              explore
             </span>
+            <span>{rotation === 0 ? 'North ↑ (0°)' : rotation === 90 ? 'East → (90°)' : rotation === 180 ? 'South ↓ (180°)' : 'West ← (270°)'}</span>
           </button>
 
-          {floorDropdownOpen && (
-            <div className="absolute top-10 right-0 z-50 w-72 rounded-2xl bg-[#0B0F17] border border-emerald-500/30 p-2 shadow-2xl backdrop-blur-xl">
-              <div className="px-2.5 py-1.5 border-b border-white/[0.06] mb-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
-                  Siddhant Floor Wings
-                </span>
-              </div>
-              <div className="space-y-1">
-                {siddhantFloors.map((floor) => (
-                  <button
-                    key={floor.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedFloorId(floor.id);
-                      setFloorDropdownOpen(false);
-                    }}
-                    className={`w-full px-2.5 py-2 rounded-xl text-left font-mono text-xs transition-all flex items-center justify-between cursor-pointer ${
-                      floor.id === selectedFloorId
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
-                        : 'hover:bg-white/[0.05] text-slate-300'
-                    }`}
-                  >
-                    <span>{floor.name}</span>
-                    {floor.id === selectedFloorId && (
-                      <span className="material-symbols-outlined text-sm text-emerald-400">check</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === 'blueprint' ? 'original' : 'blueprint')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-cyan-400 text-cyan-200 hover:bg-slate-800 transition-all cursor-pointer font-bold shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">
+              {viewMode === 'original' ? 'filter_b_and_w' : 'light_mode'}
+            </span>
+            <span>{viewMode === 'original' ? 'Original CAD Plan' : 'Electric Dark CAD'}</span>
+          </button>
         </div>
-      </div>
-
-      {/* Blueprint Corridor Aisle Guide */}
-      <div className="absolute top-[365px] left-[165px] right-[40px] h-[1px] border-b border-dashed border-slate-800 pointer-events-none" />
-      <div className="absolute top-[353px] left-[520px] text-[9px] font-mono uppercase text-slate-600 tracking-widest pointer-events-none select-none">
-        ← MAIN AISLE WAY // CENTRAL PASSAGE →
       </div>
 
       {/* ========================================================
-          FULL ARCHITECTURAL POD SEATING PLAN (Matching Global Port Visuals)
+          ACTIVE MAP RENDERER (Clean Drawing without Duplicate Header)
          ======================================================== */}
-      <div className="pt-20 px-2 h-full flex flex-col justify-between pb-4">
-        {/* Top Half: West Bank + North Pods (Alpha, Beta, Gamma, Delta) + East Bank */}
-        <div className="grid grid-cols-12 gap-3 items-start">
-          {/* West Perimeter Wall (Left Wall - 8 Desks) */}
-          <div className="col-span-2 bg-[#0C121D]/90 border border-slate-700/50 rounded-2xl p-3 shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase">West Perimeter</span>
-              <span className="text-[9px] font-mono text-slate-400">8 Seats</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
-                const deskId = `SID-${selectedFloorId.toUpperCase()}-W${num}`;
-                let d = getDesk(deskId);
-                if (!d) {
-                  d = {
-                    id: deskId,
-                    code: `W${num}`,
-                    areaId: activeArea,
-                    officeId: 'siddhant',
-                    zoneName: `${currentFloor?.name} // West Wall`,
-                    podName: 'West Perimeter Bank',
-                    row: Math.ceil(num / 2),
-                    col: ((num - 1) % 2) + 1,
-                    orientation: 'facing-right',
-                    status: num % 4 === 0 ? 'booked' : 'available',
-                    amenities: ['Window View', 'Dual 4K Monitor', 'USB-C Dock'],
-                    pricePerHour: 15
-                  };
-                }
-                return (
-                  <DeskNode
-                    key={d.id}
-                    desk={d}
-                    isSelected={selectedDesk?.id === d.id}
-                    isHighlighted={highlightedDeskId === d.id}
-                    onSelect={onSelectDesk}
-                    onHover={onHoverDesk}
-                    onLeave={onLeaveDesk}
-                  />
-                );
-              })}
-            </div>
-          </div>
+      {normalizedFloorId === 'legal_finance' && (
+        <LegalFinanceMap
+          desks={desks}
+          rooms={rooms}
+          selectedDesk={selectedDesk}
+          highlightedDeskId={highlightedDeskId}
+          onSelectDesk={onSelectDesk}
+          onHoverDesk={onHoverDesk}
+          onLeaveDesk={onLeaveDesk}
+          onSelectRoom={onSelectRoom}
+          viewMode={viewMode}
+          rotation={rotation}
+        />
+      )}
 
-          {/* Central Workstation Pods 1 & 2 */}
-          <div className="col-span-8 grid grid-cols-2 gap-4">
-            {[
-              { name: 'North Pod 1 (Alpha)', start: 1, count: 12, codePrefix: 'N1' },
-              { name: 'North Pod 2 (Beta)', start: 13, count: 12, codePrefix: 'N2' }
-            ].map((pod) => (
-              <div key={pod.name} className="bg-[#0C121D]/90 border border-slate-700/50 rounded-2xl p-3 shadow-lg">
-                <div className="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5">
-                  <span className="text-[11px] font-mono font-bold text-emerald-400">{pod.name}</span>
-                  <span className="text-[9px] font-mono text-slate-400">12 Desks</span>
-                </div>
-                <div className="grid grid-cols-6 gap-2">
-                  {Array.from({ length: pod.count }, (_, i) => i + 1).map((idx) => {
-                    const deskId = `SID-${selectedFloorId.toUpperCase()}-${pod.codePrefix}-${idx}`;
-                    let d = getDesk(deskId);
-                    if (!d) {
-                      d = {
-                        id: deskId,
-                        code: `${pod.codePrefix}-${idx}`,
-                        areaId: activeArea,
-                        officeId: 'siddhant',
-                        zoneName: `${currentFloor?.name} // Central Pods`,
-                        podName: pod.name,
-                        row: Math.ceil(idx / 2),
-                        col: ((idx - 1) % 2) + 1,
-                        orientation: idx % 2 === 1 ? 'facing-right' : 'facing-left',
-                        status: (idx + pod.start) % 5 === 0 ? 'booked' : 'available',
-                        amenities: ['Dual 4K Monitor', 'Standing Desk', 'Type-C Hub'],
-                        pricePerHour: 16
-                      };
-                    }
-                    return (
-                      <DeskNode
-                        key={d.id}
-                        desk={d}
-                        isSelected={selectedDesk?.id === d.id}
-                        isHighlighted={highlightedDeskId === d.id}
-                        onSelect={onSelectDesk}
-                        onHover={onHoverDesk}
-                        onLeave={onLeaveDesk}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+      {normalizedFloorId === 'floor_2a' && (
+        <Floor2AMap
+          desks={desks}
+          rooms={rooms}
+          selectedDesk={selectedDesk}
+          highlightedDeskId={highlightedDeskId}
+          onSelectDesk={onSelectDesk}
+          onHoverDesk={onHoverDesk}
+          onLeaveDesk={onLeaveDesk}
+          onSelectRoom={onSelectRoom}
+          viewMode={viewMode}
+          rotation={rotation}
+        />
+      )}
 
-          {/* East Perimeter Wall (Right Wall - 8 Desks) */}
-          <div className="col-span-2 bg-[#0C121D]/90 border border-slate-700/50 rounded-2xl p-3 shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase">East Perimeter</span>
-              <span className="text-[9px] font-mono text-slate-400">8 Seats</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
-                const deskId = `SID-${selectedFloorId.toUpperCase()}-E${num}`;
-                let d = getDesk(deskId);
-                if (!d) {
-                  d = {
-                    id: deskId,
-                    code: `E${num}`,
-                    areaId: activeArea,
-                    officeId: 'siddhant',
-                    zoneName: `${currentFloor?.name} // East Wall`,
-                    podName: 'East Perimeter Bank',
-                    row: Math.ceil(num / 2),
-                    col: ((num - 1) % 2) + 1,
-                    orientation: 'facing-left',
-                    status: num % 3 === 0 ? 'booked' : 'available',
-                    amenities: ['Window View', 'Ultrawide Display', 'Power Dock'],
-                    pricePerHour: 15
-                  };
-                }
-                return (
-                  <DeskNode
-                    key={d.id}
-                    desk={d}
-                    isSelected={selectedDesk?.id === d.id}
-                    isHighlighted={highlightedDeskId === d.id}
-                    onSelect={onSelectDesk}
-                    onHover={onHoverDesk}
-                    onLeave={onLeaveDesk}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
+      {normalizedFloorId === 'floor_2b' && (
+        <Floor2BMap
+          desks={desks}
+          rooms={rooms}
+          selectedDesk={selectedDesk}
+          highlightedDeskId={highlightedDeskId}
+          onSelectDesk={onSelectDesk}
+          onHoverDesk={onHoverDesk}
+          onLeaveDesk={onLeaveDesk}
+          onSelectRoom={onSelectRoom}
+          viewMode={viewMode}
+          rotation={rotation}
+        />
+      )}
 
-        {/* Bottom Half: South Pod Bays (South 1, South 2, South 3, Executive Bays) */}
-        <div className="grid grid-cols-4 gap-4 mt-4">
-          {[
-            { name: 'South Pod 1', codePrefix: 'S1', count: 12 },
-            { name: 'South Pod 2', codePrefix: 'S2', count: 12 },
-            { name: 'South Pod 3', codePrefix: 'S3', count: 12 },
-            { name: 'Executive Pod Bay', codePrefix: 'EX', count: 12 }
-          ].map((pod) => (
-            <div key={pod.name} className="bg-[#0C121D]/90 border border-slate-700/50 rounded-2xl p-3 shadow-lg">
-              <div className="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5">
-                <span className="text-[11px] font-mono font-bold text-emerald-400">{pod.name}</span>
-                <span className="text-[9px] font-mono text-slate-400">12 Desks</span>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {Array.from({ length: pod.count }, (_, i) => i + 1).map((idx) => {
-                  const deskId = `SID-${selectedFloorId.toUpperCase()}-${pod.codePrefix}-${idx}`;
-                  let d = getDesk(deskId);
-                  if (!d) {
-                    d = {
-                      id: deskId,
-                      code: `${pod.codePrefix}-${idx}`,
-                      areaId: activeArea,
-                      officeId: 'siddhant',
-                      zoneName: `${currentFloor?.name} // South Wing`,
-                      podName: pod.name,
-                      row: Math.ceil(idx / 2),
-                      col: ((idx - 1) % 2) + 1,
-                      orientation: idx % 2 === 1 ? 'facing-right' : 'facing-left',
-                      status: idx % 6 === 0 ? 'booked' : 'available',
-                      amenities: ['Dual 4K Monitor', 'Ergonomic Chair', 'Power Hub'],
-                      pricePerHour: 16
-                    };
-                  }
-                  return (
-                    <DeskNode
-                      key={d.id}
-                      desk={d}
-                      isSelected={selectedDesk?.id === d.id}
-                      isHighlighted={highlightedDeskId === d.id}
-                      onSelect={onSelectDesk}
-                      onHover={onHoverDesk}
-                      onLeave={onLeaveDesk}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {normalizedFloorId === 'floor_3a' && (
+        <Floor3AMap
+          desks={desks}
+          rooms={rooms}
+          selectedDesk={selectedDesk}
+          highlightedDeskId={highlightedDeskId}
+          onSelectDesk={onSelectDesk}
+          onHoverDesk={onHoverDesk}
+          onLeaveDesk={onLeaveDesk}
+          onSelectRoom={onSelectRoom}
+          viewMode={viewMode}
+          rotation={rotation}
+        />
+      )}
+
+      {normalizedFloorId === 'ground_b' && (
+        <GroundBMap
+          desks={desks}
+          rooms={rooms}
+          selectedDesk={selectedDesk}
+          highlightedDeskId={highlightedDeskId}
+          onSelectDesk={onSelectDesk}
+          onHoverDesk={onHoverDesk}
+          onLeaveDesk={onLeaveDesk}
+          onSelectRoom={onSelectRoom}
+          viewMode={viewMode}
+          rotation={rotation}
+        />
+      )}
     </div>
   );
 });

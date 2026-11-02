@@ -57,7 +57,7 @@ export const App: React.FC = () => {
   const [selectedOffice, setSelectedOffice] = useState<OfficeLocation>(() => {
     const saved = localStorage.getItem('smartdesk_selected_office');
     if (saved === 'siddhant' || saved === 'global-port') return saved;
-    return 'global-port';
+    return 'siddhant';
   });
   const [showOfficeModal, setShowOfficeModal] = useState<boolean>(false);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);

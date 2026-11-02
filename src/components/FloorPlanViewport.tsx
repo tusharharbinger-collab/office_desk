@@ -68,8 +68,8 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   const bookedCount = desks.filter((d) => d.status === 'booked').length;
 
   // Optimized blueprint dimensions based on active floor plan and office
-  const mapW = selectedOffice === 'siddhant' ? 1220 : (activeArea === 'area-1' ? 1180 : 1380);
-  const mapH = selectedOffice === 'siddhant' ? 920 : (activeArea === 'area-1' ? 950 : 620);
+  const mapW = selectedOffice === 'siddhant' ? 1420 : (activeArea === 'area-1' ? 1180 : 1380);
+  const mapH = selectedOffice === 'siddhant' ? 1040 : (activeArea === 'area-1' ? 950 : 620);
 
   // Sync external scale if supplied and different
   useEffect(() => {
@@ -166,6 +166,28 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
     const { clientWidth, clientHeight } = viewportRef.current;
     if (clientWidth === 0 || clientHeight === 0) return;
 
+    if (selectedOffice === 'siddhant') {
+      // Siddhant floor maps are precision architectural drawings:
+      // Fit comfortably to width with high visibility so all desk codes and rooms are clear!
+      const padX = clientWidth < 640 ? 12 : 24;
+      const scaleW = (clientWidth - padX) / 1380;
+      const roundedScale = Number(Math.min(Math.max(scaleW * 0.98, 0.75), 1.05).toFixed(2));
+      const centeredX = Math.round((clientWidth - 1380 * roundedScale) / 2);
+      const topY = 16;
+
+      isUserInteractedRef.current = false;
+      if (animated) {
+        triggerAnimatedTransform({ x: centeredX, y: topY }, roundedScale);
+      } else {
+        setInternalScale(roundedScale);
+        setPan({ x: centeredX, y: topY });
+        scaleRef.current = roundedScale;
+        panRef.current = { x: centeredX, y: topY };
+        if (onScaleChange) onScaleChange(roundedScale);
+      }
+      return;
+    }
+
     const padX = clientWidth < 640 ? 20 : 44;
     const padY = clientHeight < 640 ? 20 : 44;
     const scaleW = (clientWidth - padX) / mapW;
@@ -188,13 +210,24 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       panRef.current = { x: centeredX, y: centeredY };
       if (onScaleChange) onScaleChange(roundedScale);
     }
-  }, [mapW, mapH, triggerAnimatedTransform, onScaleChange]);
+  }, [mapW, mapH, selectedOffice, triggerAnimatedTransform, onScaleChange]);
 
   // Fit All: Entire blueprint fits within window
   const fitAll = useCallback(() => {
     if (!viewportRef.current) return;
     const { clientWidth, clientHeight } = viewportRef.current;
     if (clientWidth === 0 || clientHeight === 0) return;
+
+    if (selectedOffice === 'siddhant') {
+      const padX = clientWidth < 640 ? 12 : 24;
+      const scaleW = (clientWidth - padX) / 1380;
+      const roundedScale = Number(Math.min(Math.max(scaleW * 0.98, 0.75), 1.05).toFixed(2));
+      const centeredX = Math.round((clientWidth - 1380 * roundedScale) / 2);
+      const topY = 16;
+      isUserInteractedRef.current = false;
+      triggerAnimatedTransform({ x: centeredX, y: topY }, roundedScale);
+      return;
+    }
 
     const padX = clientWidth < 640 ? 16 : 36;
     const padY = clientHeight < 640 ? 16 : 36;
@@ -208,7 +241,7 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
 
     isUserInteractedRef.current = false;
     triggerAnimatedTransform({ x: centeredX, y: centeredY }, roundedScale);
-  }, [mapW, mapH, triggerAnimatedTransform]);
+  }, [mapW, mapH, selectedOffice, triggerAnimatedTransform]);
 
   // Fill Width: Scales to full window width
   const fitToWidth = useCallback(() => {
@@ -217,16 +250,17 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
     if (clientWidth === 0) return;
 
     const padX = clientWidth < 640 ? 16 : 40;
-    const scaleW = (clientWidth - padX) / mapW;
-    const fitScale = Math.min(Math.max(scaleW * 0.96, 0.5), 1.6);
+    const widthTarget = selectedOffice === 'siddhant' ? 1380 : mapW;
+    const scaleW = (clientWidth - padX) / widthTarget;
+    const fitScale = Math.min(Math.max(scaleW * 0.96, selectedOffice === 'siddhant' ? 0.75 : 0.5), 1.6);
     const roundedScale = Number(fitScale.toFixed(2));
 
-    const centeredX = Math.round((clientWidth - mapW * roundedScale) / 2);
-    const topY = 20;
+    const centeredX = Math.round((clientWidth - widthTarget * roundedScale) / 2);
+    const topY = 16;
 
     isUserInteractedRef.current = false;
     triggerAnimatedTransform({ x: centeredX, y: topY }, roundedScale);
-  }, [mapW, triggerAnimatedTransform]);
+  }, [mapW, selectedOffice, triggerAnimatedTransform]);
 
   // ResizeObserver: auto-adjusts layout when window or sidebar toggles
   useEffect(() => {
@@ -266,7 +300,7 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [activeArea, fitToScreen, clampPan]);
+  }, [activeArea, selectedOffice, fitToScreen, clampPan]);
 
   // Ultra-Smooth Wheel Zoom & Pan (Passive: false, hardware-accelerated RAF)
   useEffect(() => {
@@ -511,28 +545,32 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       {/* Hover Card Tooltip */}
       <SeatTooltip desk={hoveredDesk} position={tooltipPos} />
 
-      {/* Floating Status Legend (Bottom-Left Pill, non-obtrusive) */}
-      <div className="absolute bottom-5 left-5 z-20 hidden xs:flex sm:flex items-center gap-2.5 sm:gap-3.5 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] px-3.5 py-2 rounded-xl shadow-xl pointer-events-none text-[11px] sm:text-xs text-slate-300 font-medium font-mono">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-          <span>Available ({availableCount})</span>
+      {/* Floating Status Legend (Bottom-Left Pill, non-obtrusive; hidden during booking to prevent overlap) */}
+      {!selectedDesk && (
+        <div className="absolute bottom-5 left-5 z-20 hidden xs:flex sm:flex items-center gap-2.5 sm:gap-3.5 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] px-3.5 py-2 rounded-xl shadow-xl pointer-events-none text-[11px] sm:text-xs text-slate-300 font-medium font-mono">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+            <span>Available ({availableCount})</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
+            <span>Selected</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_#fb7185]" />
+            <span>Occupied ({bookedCount})</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+            <span>Hold</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
-          <span>Selected</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_#fb7185]" />
-          <span>Occupied ({bookedCount})</span>
-        </div>
-        <div className="hidden sm:flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-          <span>Hold</span>
-        </div>
-      </div>
+      )}
 
-      {/* Floating Canvas Controls Dock (Bottom-Right, Fully Responsive) */}
-      <div className="absolute bottom-5 right-5 z-30 flex items-center gap-1 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-1.5 shadow-[0_8px_25px_rgba(0,0,0,0.6)]">
+      {/* Floating Canvas Controls Dock (Bottom-Right, Responsive, moves up during booking) */}
+      <div className={`absolute right-5 z-30 flex items-center gap-1 bg-[#0B0F17]/95 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-1.5 shadow-[0_8px_25px_rgba(0,0,0,0.6)] transition-all duration-200 ${
+        selectedDesk ? 'bottom-20 sm:bottom-24' : 'bottom-5'
+      }`}>
         {/* Zoom Out */}
         <button
           type="button"

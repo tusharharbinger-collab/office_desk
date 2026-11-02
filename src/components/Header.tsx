@@ -306,61 +306,55 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            {/* Segmented Area Switcher (Apple/Linear Style) */}
-            <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9 shadow-inner">
-              <button
-                onClick={() => onAreaChange('area-1')}
-                className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                  activeArea === 'area-1'
-                    ? selectedOffice === 'siddhant'
-                      ? 'bg-emerald-500/20 text-emerald-200 font-semibold border border-emerald-400/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
-                      : 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
-                }`}
-              >
-                <span>Area 1</span>
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+            {/* Segmented Area Switcher: only shown for Global Port campus */}
+            {selectedOffice !== 'siddhant' && (
+              <div className="inline-flex items-center p-0.5 rounded-xl bg-black/40 border border-white/[0.08] h-9 shadow-inner">
+                <button
+                  onClick={() => onAreaChange('area-1')}
+                  className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                     activeArea === 'area-1'
-                      ? selectedOffice === 'siddhant'
-                        ? 'bg-emerald-400/25 text-emerald-200 font-bold'
-                        : 'bg-sky-400/25 text-sky-200 font-bold'
-                      : 'text-slate-500 bg-white/[0.04]'
+                      ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
                   }`}
                 >
-                  {selectedOffice === 'siddhant' ? '80' : '130'}
-                </span>
-              </button>
+                  <span>Area 1</span>
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                      activeArea === 'area-1'
+                        ? 'bg-sky-400/25 text-sky-200 font-bold'
+                        : 'text-slate-500 bg-white/[0.04]'
+                    }`}
+                  >
+                    130
+                  </span>
+                </button>
 
-              <button
-                onClick={() => onAreaChange('area-2')}
-                className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
-                  activeArea === 'area-2'
-                    ? selectedOffice === 'siddhant'
-                      ? 'bg-emerald-500/20 text-emerald-200 font-semibold border border-emerald-400/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
-                      : 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
-                }`}
-              >
-                <span>Area 2</span>
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                <button
+                  onClick={() => onAreaChange('area-2')}
+                  className={`px-2.5 sm:px-3 h-7.5 rounded-[9px] text-xs transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                     activeArea === 'area-2'
-                      ? selectedOffice === 'siddhant'
-                        ? 'bg-emerald-400/25 text-emerald-200 font-bold'
-                        : 'bg-sky-400/25 text-sky-200 font-bold'
-                      : 'text-slate-500 bg-white/[0.04]'
+                      ? 'bg-sky-500/20 text-sky-200 font-semibold border border-sky-400/40 shadow-[0_0_12px_rgba(14,165,233,0.2)]'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] font-medium border border-transparent'
                   }`}
                 >
-                  {selectedOffice === 'siddhant' ? '40' : '80'}
-                </span>
-              </button>
-            </div>
+                  <span>Area 2</span>
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                      activeArea === 'area-2'
+                        ? 'bg-sky-400/25 text-sky-200 font-bold'
+                        : 'text-slate-500 bg-white/[0.04]'
+                    }`}
+                  >
+                    80
+                  </span>
+                </button>
+              </div>
+            )}
 
             {/* Nav Bar Meeting Rooms Booking Button */}
             <button
               onClick={() => onTabChange && onTabChange('meeting-rooms')}
-              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-300 hover:text-white text-xs font-semibold cursor-pointer transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/40 text-slate-300 hover:text-white text-xs font-semibold cursor-pointer transition-all shadow-sm flex-shrink-0"
               title="Meeting Room Booking & Management"
             >
               <span className="material-symbols-outlined text-[17px] text-sky-400">meeting_room</span>
@@ -373,8 +367,8 @@ export const Header: React.FC<HeaderProps> = ({
       {/* ========================================================
           CENTER ZONE: Omnibar Search (Centered, Non-squished)
          ======================================================== */}
-      <div className="hidden md:flex items-center justify-center flex-1 min-w-0 px-2 lg:px-4">
-        <div className="relative flex items-center h-9 w-full max-w-xs lg:max-w-sm xl:max-w-md rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.08] focus-within:border-sky-500/50 focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:bg-[#0c101a] transition-all px-3 shadow-inner">
+      <div className="hidden xl:flex items-center justify-center flex-1 max-w-sm px-2 mx-auto">
+        <div className="relative flex items-center h-9 w-full rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.08] focus-within:border-sky-500/50 focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:bg-[#0c101a] transition-all px-3 shadow-inner">
           <span className="material-symbols-outlined text-slate-400 text-[18px] pointer-events-none flex-shrink-0">
             search
           </span>
@@ -395,7 +389,7 @@ export const Header: React.FC<HeaderProps> = ({
               ✕
             </button>
           ) : (
-            <kbd className="hidden lg:inline-flex items-center text-[10px] font-mono text-slate-400 bg-white/[0.06] border border-white/[0.1] px-1.5 py-0.5 rounded shadow-inner flex-shrink-0">
+            <kbd className="inline-flex items-center text-[10px] font-mono text-slate-400 bg-white/[0.06] border border-white/[0.1] px-1.5 py-0.5 rounded shadow-inner flex-shrink-0">
               Ctrl K
             </kbd>
           )}
@@ -407,7 +401,7 @@ export const Header: React.FC<HeaderProps> = ({
          ======================================================== */}
       <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 flex-shrink-0" ref={userMenuRef}>
         {/* Interactive Date & Shift Selector Capsule */}
-        <div className="relative" ref={dateTimeRef}>
+        <div className="relative flex-shrink-0" ref={dateTimeRef}>
           <button
             onClick={() => setDateTimeOpen(!dateTimeOpen)}
             className={`inline-flex items-center gap-1.5 sm:gap-2 h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-sm group ${
@@ -420,14 +414,11 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="material-symbols-outlined text-[17px] text-sky-400 group-hover:scale-110 transition-transform flex-shrink-0">
               calendar_month
             </span>
-            <span className="font-semibold text-slate-200 hidden xl:inline">
+            <span className="font-semibold text-slate-200">
               {formatDisplayDate(selectedDate)}
             </span>
-            <span className="font-semibold text-slate-200 xl:hidden">
-              {formatDisplayDate(selectedDate).split(',')[0]}
-            </span>
             <span className="text-white/20 font-light hidden sm:inline">•</span>
-            <span className="text-sky-300/90 font-mono text-[11px] font-medium hidden sm:inline">
+            <span className="text-sky-300 font-mono text-[11px] font-semibold hidden sm:inline">
               {startTime}–{endTime}
             </span>
             <span className="material-symbols-outlined text-sm text-slate-400 group-hover:text-slate-200 transition-colors flex-shrink-0">

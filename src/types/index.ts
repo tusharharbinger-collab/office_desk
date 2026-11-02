@@ -3,12 +3,16 @@ export type Role = 'user' | 'manager' | 'admin';
 export type OfficeLocation = 'global-port' | 'siddhant';
 
 export type SiddhantFloorId =
+  | 'legal_finance'
+  | 'floor_2a'
+  | 'floor_2b'
+  | 'floor_3a'
+  | 'ground_b'
   | 'finance_legal'
   | '2nd_floor_a_wing'
   | '2nd_floor_b_wing'
   | '3rd_floor_a_wing'
-  | '3rd_floor_b_wing'
-  | 'ground_b';
+  | '3rd_floor_b_wing';
 
 export interface SiddhantFloorConfig {
   id: SiddhantFloorId;
