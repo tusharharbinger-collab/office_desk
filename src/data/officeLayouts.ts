@@ -24,6 +24,22 @@ export const INITIAL_USERS: UserProfile[] = [
     role: 'user',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80',
     active: true
+  },
+  {
+    id: 'usr-employee-2',
+    name: 'Priya Sharma',
+    email: 'priya@smartdesk.com',
+    role: 'user',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80',
+    active: true
+  },
+  {
+    id: 'usr-employee-3',
+    name: 'Marcus Brody',
+    email: 'marcus@smartdesk.com',
+    role: 'user',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80',
+    active: true
   }
 ];
 

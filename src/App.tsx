@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Desk,
   Room,
@@ -6,7 +6,8 @@ import {
   Booking,
   Role,
   SystemHealthMetric,
-  OfficeLocation
+  OfficeLocation,
+  SiddhantFloorId
 } from './types';
 import {
   INITIAL_USERS,
@@ -24,22 +25,22 @@ import { LoginModal } from './components/LoginModal';
 import { SignUpModal } from './components/SignUpModal';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { Header } from './components/Header';
+import { OfficeFloorNavHeader } from './components/OfficeFloorNavHeader';
 import { FloorPlanViewport } from './components/FloorPlanViewport';
 import { BookingBar } from './components/BookingBar';
 import { SeatBookingModal } from './components/SeatBookingModal';
+import { BookedSeatDetailsModal } from './components/BookedSeatDetailsModal';
 import { MyBookingsModal } from './components/MyBookingsModal';
 import { EditBookingModal } from './components/EditBookingModal';
 import { ManagerAnalyticsModal } from './components/ManagerAnalyticsModal';
 import { AdminUsersModal } from './components/AdminUsersModal';
 import { AdminHealthModal } from './components/AdminHealthModal';
 import { RegisterModal } from './components/RegisterModal';
-import { TimeGridModal } from './components/TimeGridModal';
 import { RoomBookingModal } from './components/RoomBookingModal';
 import { MeetingRoomsModal } from './components/MeetingRoomsModal';
 import { MicrosoftSSOModal } from './components/MicrosoftSSOModal';
 import { OutlookEmailsModal } from './components/OutlookEmailsModal';
 import { OfficeSelectionModal } from './components/OfficeSelectionModal';
-import { MobileAppPreviewModal } from './components/MobileAppPreviewModal';
 import { Avatar } from './components/Avatar';
 import { getTodayISODate } from './utils/dateTime';
 
@@ -51,8 +52,7 @@ export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   // Mobile App Web View Preview State
-  const [showMobileViewModal, setShowMobileViewModal] = useState<boolean>(false);
-
+  
   // Office Campus Location State (Global Port vs Siddhant)
   const [selectedOffice, setSelectedOffice] = useState<OfficeLocation>(() => {
     const saved = localStorage.getItem('smartdesk_selected_office');
@@ -73,6 +73,23 @@ export const App: React.FC = () => {
   const [showSignUpModal, setShowSignUpModal] = useState<boolean>(false);
   const [showMicrosoftSSOModal, setShowMicrosoftSSOModal] = useState<boolean>(false);
 
+  // Lock background page scrolling when any authentication modal is active
+  useEffect(() => {
+    const isAnyAuthModalOpen = showLoginModal || showSignUpModal || showMicrosoftSSOModal;
+    if (isAnyAuthModalOpen) {
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+      };
+    }
+  }, [showLoginModal, showSignUpModal, showMicrosoftSSOModal]);
+
   // Layout UI State (Default to spacious slim rail mode)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
   const [activeArea, setActiveArea] = useState<'area-1' | 'area-2'>('area-1');
@@ -91,6 +108,8 @@ export const App: React.FC = () => {
 
   // Active Floor Plan selection & settings
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
+  const [siddhantFloorId, setSiddhantFloorId] = useState<SiddhantFloorId>('floor_2a');
+  const [viewingBookedDesk, setViewingBookedDesk] = useState<Desk | null>(null);
   const [selectedDuration, setSelectedDuration] = useState('Full Day (8h)');
 
   // Exact Date and Time Slot state for dynamic allocation & de-allocation
@@ -122,7 +141,7 @@ export const App: React.FC = () => {
   };
 
 
-  // Search handler
+  // Search handler (smart matching & area auto-switching)
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
@@ -130,14 +149,32 @@ export const App: React.FC = () => {
       return;
     }
 
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
     const currentDesksList = activeArea === 'area-1' ? area1Desks : area2Desks;
-    const matched = currentDesksList.find(
+    let matched = currentDesksList.find(
       (d) =>
         d.id.toLowerCase().includes(q) ||
+        d.code.toLowerCase() === q ||
         d.code.toLowerCase().includes(q) ||
         (d.occupant && d.occupant.name.toLowerCase().includes(q))
     );
+
+    // If not found in current area, check the other area and auto-navigate
+    if (!matched) {
+      const otherAreaId = activeArea === 'area-1' ? 'area-2' : 'area-1';
+      const otherList = activeArea === 'area-1' ? area2Desks : area1Desks;
+      const otherMatched = otherList.find(
+        (d) =>
+          d.id.toLowerCase().includes(q) ||
+          d.code.toLowerCase() === q ||
+          d.code.toLowerCase().includes(q) ||
+          (d.occupant && d.occupant.name.toLowerCase().includes(q))
+      );
+      if (otherMatched) {
+        setActiveArea(otherAreaId);
+        matched = otherMatched;
+      }
+    }
 
     if (matched) {
       setHighlightedDeskId(matched.id);
@@ -146,11 +183,24 @@ export const App: React.FC = () => {
     }
   };
 
+  // Handler when user cancels office selection: redirect to main landing page
+  const handleCancelOfficeSelection = () => {
+    setShowOfficeModal(false);
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setActiveTab('floor-plan');
+    sessionStorage.removeItem('smartdesk_active_session');
+    sessionStorage.removeItem('smartdesk_office_chosen');
+  };
+
   // Handler to switch office campus (Global Port vs Siddhant)
   const handleSelectOffice = (office: OfficeLocation) => {
     setSelectedOffice(office);
     localStorage.setItem('smartdesk_selected_office', office);
     sessionStorage.setItem('smartdesk_office_chosen', 'true');
+    sessionStorage.setItem('smartdesk_active_session', 'true');
+    setIsAuthenticated(true);
+    setActiveTab('floor-plan');
     setShowOfficeModal(false);
     setSelectedDesk(null);
     setHighlightedDeskId(null);
@@ -171,6 +221,7 @@ export const App: React.FC = () => {
           try {
             const res = await api.loginWithMicrosoftCode(authCode);
             setCurrentUser(res.user);
+            setActiveTab('floor-plan');
             setIsAuthenticated(true);
             setShowOfficeModal(true);
             showToast(`Welcome, ${res.user.name}! (Microsoft 365)`);
@@ -239,6 +290,13 @@ export const App: React.FC = () => {
     loadData();
   }, [isAuthenticated]);
 
+  // Auto-refresh bookings when switching to my-bookings page
+  useEffect(() => {
+    if (activeTab === 'my-bookings') {
+      refreshBookingsData(selectedOffice);
+    }
+  }, [activeTab, selectedOffice]);
+
   // Refresh both allBookings (for seat rules) and user's myBookings
   const refreshBookingsData = async (office = selectedOffice) => {
     try {
@@ -302,8 +360,28 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('resize', handleScreenResize);
   }, []);
 
-  const currentDesks = activeArea === 'area-1' ? area1Desks : area2Desks;
+  const rawCurrentDesks = activeArea === 'area-1' ? area1Desks : area2Desks;
   const currentRooms = activeArea === 'area-1' ? area1Rooms : area2Rooms;
+
+  // Enrich desks with user role & ownership matrix (BookMyShow greyish vs self-booked red vs admin red)
+  const currentDesks = useMemo(() => {
+    const currentUserId = currentUser?.id;
+    const currentUserName = currentUser?.name?.toLowerCase();
+    const role = currentUser?.role || 'user';
+
+    return rawCurrentDesks.map((d: Desk) => {
+      const isSelf = d.status === 'booked' && (
+        (d.occupant?.userId && currentUserId && d.occupant.userId === currentUserId) ||
+        (d.occupant?.name && currentUserName && d.occupant.name.toLowerCase() === currentUserName) ||
+        bookings.some((b) => b.deskId === d.id && b.status === 'active' && b.date === selectedDate)
+      );
+      return {
+        ...d,
+        userRole: role,
+        isSelfBooked: Boolean(isSelf)
+      };
+    });
+  }, [rawCurrentDesks, currentUser, bookings, selectedDate]);
 
   const totalSeats = currentDesks.length;
   const bookedSeats = currentDesks.filter((d) => d.status === 'booked').length;
@@ -342,6 +420,7 @@ export const App: React.FC = () => {
     } else {
       setSelectedTargetUser(user);
     }
+    setActiveTab('floor-plan');
     setIsAuthenticated(true);
     setShowOfficeModal(true); // Prompts user/manager/admin to select campus
     showToast(`Welcome! Logged in as ${user.name} (${user.role.toUpperCase()})`);
@@ -358,6 +437,7 @@ export const App: React.FC = () => {
     } else {
       setSelectedTargetUser(user);
     }
+    setActiveTab('floor-plan');
     setIsAuthenticated(true);
     setShowOfficeModal(true); // Prompts user/manager/admin to select campus
     showToast(`Welcome back, ${user.name}!`);
@@ -372,10 +452,22 @@ export const App: React.FC = () => {
     showToast('Signed out of SmartDesk');
   };
 
-  // Desk selection handler
+  // Desk selection handler: enforces color matrix view & popup authorization
   const handleSelectDesk = (desk: Desk) => {
     if (desk.status === 'booked') {
-      showToast(`Desk ${desk.id} is occupied by ${desk.occupant?.name || 'another team member'}.`);
+      const isSelf = Boolean(
+        desk.isSelfBooked ||
+        (desk.occupant?.userId && currentUser?.id && desk.occupant.userId === currentUser.id) ||
+        (desk.occupant?.name && currentUser?.name && desk.occupant.name.toLowerCase() === currentUser.name.toLowerCase()) ||
+        bookings.some((b) => b.deskId === desk.id && b.status === 'active' && b.date === selectedDate)
+      );
+      const isAdminOrManager = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+
+      // Self-booked seat OR Admin/Manager inspecting booked seat: open popup!
+      if (isSelf || isAdminOrManager) {
+        setViewingBookedDesk(desk);
+      }
+      // For regular employee clicking someone else's booked seat: strictly NO POPUP (BookMyShow style)
       return;
     }
 
@@ -780,7 +872,6 @@ export const App: React.FC = () => {
         selectedOffice={selectedOffice}
         onOpenOfficeModal={() => setShowOfficeModal(true)}
         onLogout={handleLogout}
-        onNavigateLanding={() => setIsAuthenticated(false)}
         onCollapse={() => setIsSidebarCollapsed(true)}
       />
 
@@ -792,37 +883,7 @@ export const App: React.FC = () => {
       >
         {/* Single Unified Sleek Header */}
         <Header
-          activeArea={activeArea}
-          onAreaChange={(area) => {
-            setActiveArea(area);
-            setSelectedDesk(null);
-            setHighlightedDeskId(null);
-          }}
-          selectedOffice={selectedOffice}
-          onOfficeChange={handleSelectOffice}
           onOpenOfficeModal={() => setShowOfficeModal(true)}
-          selectedDate={selectedDate}
-          onDateChange={(d) => {
-            setSelectedDate(d);
-            refreshDesks(d, startTime, endTime, selectedOffice);
-          }}
-          selectedTimeSlot={selectedTimeSlot}
-          onTimeSlotChange={(slotId, sTime, eTime) => {
-            setSelectedTimeSlot(slotId);
-            const s = sTime || startTime;
-            const e = eTime || endTime;
-            setStartTime(s);
-            setEndTime(e);
-            refreshDesks(selectedDate, s, e, selectedOffice);
-          }}
-          startTime={startTime}
-          endTime={endTime}
-          onCustomTimeChange={(s, e) => {
-            setSelectedTimeSlot('custom');
-            setStartTime(s);
-            setEndTime(e);
-            refreshDesks(selectedDate, s, e, selectedOffice);
-          }}
           currentUser={currentUser}
           allUsers={users}
           onSwitchUser={async (user) => {
@@ -840,23 +901,43 @@ export const App: React.FC = () => {
             showToast(`Switched active profile to ${user.name} (${user.role.toUpperCase()})`);
           }}
           onOpenRegister={() => setShowRegisterModal(true)}
-          occupancyRate={occupancyRate}
-          totalSeats={totalSeats}
-          bookedSeats={bookedSeats}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
           onLogout={handleLogout}
           onOpenOutlookEmails={() => setShowOutlookEmailsModal(true)}
           emailCount={outlookEmailsCount}
-          onOpenMobileView={() => setShowMobileViewModal(true)}
+        />
+
+        {/* Office Sub-Header Navigation Bar (Floor/Wing buttons tailored per office campus + Meeting Rooms) */}
+        <OfficeFloorNavHeader
+          selectedOffice={selectedOffice}
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setSelectedDesk(null);
+            setHighlightedDeskId(null);
+          }}
+          activeArea={activeArea}
+          onAreaChange={(area) => {
+            setActiveArea(area);
+            setSelectedDesk(null);
+            setHighlightedDeskId(null);
+          }}
+          siddhantFloorId={siddhantFloorId}
+          onSiddhantFloorChange={(floor) => {
+            setSiddhantFloorId(floor);
+            setSelectedDesk(null);
+            setHighlightedDeskId(null);
+          }}
+          area1DeskCount={area1Desks.length}
+          area2DeskCount={area2Desks.length}
+          meetingRoomsCount={currentRooms.length}
         />
 
         {/* Central Content Viewport: Page Router for Sidebar Navigation */}
-        <main className="flex-1 pt-14 relative overflow-hidden bg-[#090D16] h-full flex flex-col">
+        <main className="flex-1 relative overflow-hidden bg-[#090D16] h-full flex flex-col">
           {/* VIEW 1: FLOOR PLAN MAP */}
           {activeTab === 'floor-plan' && (
             <div className="w-full h-full relative overflow-hidden flex-1">
@@ -894,8 +975,15 @@ export const App: React.FC = () => {
                 rooms={currentRooms}
                 selectedDesk={selectedDesk}
                 highlightedDeskId={highlightedDeskId}
+                searchQuery={searchQuery}
+                siddhantFloorId={siddhantFloorId}
+                onSiddhantFloorChange={setSiddhantFloorId}
                 onSelectDesk={handleSelectDesk}
                 onSelectRoom={setSelectedRoomForBooking}
+                currentUser={currentUser}
+                userRole={currentUser?.role}
+                bookings={bookings}
+                selectedDate={selectedDate}
               />
 
               {/* Floating Bottom Booking Drawer (Appears ONLY when seat is selected) */}
@@ -928,28 +1016,6 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* VIEW 2: TIME GRID SCHEDULER PAGE */}
-          {activeTab === 'time-grid' && (
-            <TimeGridModal
-              isOpen={true}
-              isPageView={true}
-              onClose={() => setActiveTab('floor-plan')}
-              activeArea={activeArea}
-              selectedOffice={selectedOffice}
-              onAreaChange={(area) => {
-                setActiveArea(area);
-                setSelectedDesk(null);
-                setHighlightedDeskId(null);
-              }}
-              desks={currentDesks}
-              selectedDate={selectedDate}
-              onSelectDesk={(desk) => {
-                handleSelectDesk(desk);
-                setActiveTab('floor-plan');
-              }}
-            />
-          )}
-
           {/* VIEW 3: MY BOOKINGS PAGE */}
           {activeTab === 'my-bookings' && (
             <MyBookingsModal
@@ -957,6 +1023,9 @@ export const App: React.FC = () => {
               isPageView={true}
               onClose={() => setActiveTab('floor-plan')}
               bookings={bookings}
+              allBookings={allBookings}
+              currentUser={currentUser}
+              userRole={currentUser?.role}
               onCancelBooking={handleCancelBooking}
               onCheckIn={handleCheckIn}
               onOpenEdit={(b) => {
@@ -1097,15 +1166,36 @@ export const App: React.FC = () => {
         isOpen={showOfficeModal}
         currentOffice={selectedOffice}
         onSelectOffice={handleSelectOffice}
-        onClose={() => setShowOfficeModal(false)}
+        onClose={handleCancelOfficeSelection}
         canDismiss={true}
       />
 
-      {/* Mobile User App Web View Simulator Modal */}
-      <MobileAppPreviewModal
-        isOpen={showMobileViewModal}
-        onClose={() => setShowMobileViewModal(false)}
+
+      {/* Booked Seat Details & Inspector Modal */}
+      <BookedSeatDetailsModal
+        isOpen={!!viewingBookedDesk}
+        onClose={() => setViewingBookedDesk(null)}
+        desk={viewingBookedDesk}
         currentUser={currentUser}
+        userRole={currentUser?.role}
+        selectedDate={selectedDate}
+        booking={
+          viewingBookedDesk
+            ? bookings.find(
+                (b) =>
+                  b.deskId === viewingBookedDesk.id &&
+                  b.status === 'active' &&
+                  b.date === selectedDate
+              ) || null
+            : null
+        }
+        onCheckIn={handleCheckIn}
+        onCancelBooking={handleCancelBooking}
+        onOpenEdit={(b) => {
+          setEditingBooking(b);
+          setShowEditBookingModal(true);
+        }}
+        onReleaseSeat={handleReleaseGhostSeat}
       />
     </div>
   );

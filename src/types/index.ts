@@ -43,9 +43,12 @@ export type DeskStatus = 'available' | 'selected' | 'booked' | 'hold';
 export type DeskOrientation = 'facing-left' | 'facing-right' | 'facing-up' | 'facing-down';
 
 export interface Occupant {
+  userId?: string;
+  bookingId?: string;
   name: string;
   avatar: string;
   role: string;
+  department?: string;
   bookedTime: string;
   hoursRemaining: string;
 }
@@ -64,6 +67,9 @@ export interface Desk {
   amenities: string[];
   occupant?: Occupant;
   pricePerHour?: number;
+  isSelfBooked?: boolean;
+  userRole?: Role;
+  isSearchMatch?: boolean;
 }
 
 export interface Room {
@@ -81,6 +87,10 @@ export interface Room {
 export interface Booking {
   id: string;
   userId?: string;
+  bookedBy?: string;
+  bookedByName?: string;
+  bookedByRole?: string;
+  isAllocatedByMe?: boolean;
   deskId: string;
   roomId?: string;
   areaId: 'area-1' | 'area-2';

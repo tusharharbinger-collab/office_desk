@@ -67,6 +67,7 @@ export function initDatabase() {
       cost REAL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       office_id TEXT DEFAULT 'global-port',
+      booked_by TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
@@ -163,6 +164,26 @@ function seedInitialData() {
       'user',
       'Product Design',
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80'
+    );
+
+    insertUser.run(
+      'usr-employee-2',
+      'priya@smartdesk.com',
+      hash('user123'),
+      'Priya Sharma',
+      'user',
+      'QA & Automation',
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80'
+    );
+
+    insertUser.run(
+      'usr-employee-3',
+      'marcus@smartdesk.com',
+      hash('user123'),
+      'Marcus Brody',
+      'user',
+      'Backend Engineering',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80'
     );
   }
 

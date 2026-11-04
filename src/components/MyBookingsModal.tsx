@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Booking } from '../types';
+import { Booking, Role, UserProfile } from '../types';
 
 interface MyBookingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   bookings: Booking[];
+  allBookings?: Booking[];
+  currentUser?: UserProfile | null;
+  userRole?: Role;
   onCancelBooking: (bookingId: string) => void;
   onCheckIn: (bookingId: string) => void;
   onOpenEdit: (booking: Booking) => void;
@@ -16,6 +19,9 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
   isOpen,
   onClose,
   bookings,
+  allBookings = [],
+  currentUser,
+  userRole,
   onCancelBooking,
   onCheckIn,
   onOpenEdit,
@@ -24,23 +30,34 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const [bookingScope, setBookingScope] = useState<'my' | 'all'>('my');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'upcoming' | 'checked_in'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'desks' | 'meetings'>('all');
 
-  const activeBookings = useMemo(() => bookings.filter((b) => b.status === 'active'), [bookings]);
-  const upcomingBookings = useMemo(() => bookings.filter((b) => b.status === 'upcoming'), [bookings]);
-  const meetingBookings = useMemo(() => bookings.filter((b) => Boolean(b.roomId || b.teamsMeetingUrl)), [bookings]);
-  const deskBookings = useMemo(() => bookings.filter((b) => !b.roomId && !b.teamsMeetingUrl), [bookings]);
-  const checkedInCount = useMemo(() => bookings.filter((b) => b.checkInStatus).length, [bookings]);
+  const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+  const effectiveBookings = useMemo(() => {
+    if (isAdminOrManager && bookingScope === 'all') {
+      return allBookings || [];
+    }
+    return bookings;
+  }, [isAdminOrManager, bookingScope, allBookings, bookings]);
+
+  const activeBookings = useMemo(() => effectiveBookings.filter((b) => b.status === 'active'), [effectiveBookings]);
+  const upcomingBookings = useMemo(() => effectiveBookings.filter((b) => b.status === 'upcoming'), [effectiveBookings]);
+  const meetingBookings = useMemo(() => effectiveBookings.filter((b) => Boolean(b.roomId || b.teamsMeetingUrl)), [effectiveBookings]);
+  const deskBookings = useMemo(() => effectiveBookings.filter((b) => !b.roomId && !b.teamsMeetingUrl), [effectiveBookings]);
+  const checkedInCount = useMemo(() => effectiveBookings.filter((b) => b.checkInStatus).length, [effectiveBookings]);
 
   const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
+    return effectiveBookings.filter((b) => {
       const q = searchQuery.toLowerCase();
       const deskId = b.deskId || '';
       const deskCode = b.deskCode || '';
       const podName = b.podName || '';
       const date = b.date || '';
+      const userName = (b.userName || '').toLowerCase();
+      const userRoleText = (b.userRole || '').toLowerCase();
       const attendeesText = (b.attendees || []).map((a) => a.name).join(' ').toLowerCase();
 
       const matchesSearch =
@@ -49,6 +66,8 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
         deskCode.toLowerCase().includes(q) ||
         podName.toLowerCase().includes(q) ||
         date.includes(q) ||
+        userName.includes(q) ||
+        userRoleText.includes(q) ||
         attendeesText.includes(q);
 
       const matchesStatus =
@@ -70,7 +89,7 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [bookings, searchQuery, statusFilter, typeFilter]);
+  }, [effectiveBookings, searchQuery, statusFilter, typeFilter]);
 
   const content = (
     <div className="flex-1 flex flex-col space-y-5">
@@ -78,29 +97,75 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-[#121724]/90 border border-white/[0.08] shadow-lg backdrop-blur-xl">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-600/20 text-emerald-400 border border-emerald-400/30 flex items-center justify-center shadow-[0_0_20px_rgba(52,211,153,0.3)] flex-shrink-0">
-            <span className="material-symbols-outlined text-[26px]">bookmark</span>
+            <span className="material-symbols-outlined text-[26px]">
+              {bookingScope === 'all' ? 'groups' : 'bookmark'}
+            </span>
           </div>
           <div>
             <div className="flex items-center gap-2.5">
               <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                Workspace / Passes & Meetings
+                Workspace / {bookingScope === 'all' ? 'All Employee History' : 'Passes & Meetings'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-500" />
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 font-mono font-bold uppercase">
-                Active Passes ({bookings.length})
+                {bookingScope === 'all' ? `All Records (${effectiveBookings.length})` : `Active Passes (${effectiveBookings.length})`}
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-0.5">
-              My Office Passes & Teams Meetings
+              {bookingScope === 'all'
+                ? 'All Employee Bookings & History'
+                : isAdminOrManager
+                ? 'My Bookings & Employee Allocations'
+                : 'My Office Passes & Teams Meetings'}
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Review confirmed desk passes, join Microsoft Teams room sessions, or view invited attendees.
+              {bookingScope === 'all'
+                ? 'Overview of all employee workstation bookings, room reservations, check-ins, and company seating history.'
+                : isAdminOrManager
+                ? 'Review seats and meeting rooms you allocated for team members, manage active passes, or check in attendees.'
+                : 'Review confirmed desk passes, join Microsoft Teams room sessions, or view invited attendees.'}
             </p>
           </div>
         </div>
 
-        {/* Header Actions */}
-        <div className="flex items-center gap-2.5">
+        {/* Header Actions & Admin Scope Switcher */}
+        <div className="flex flex-wrap items-center gap-3">
+          {isAdminOrManager && (
+            <div className="inline-flex p-1 rounded-2xl bg-black/60 border border-white/[0.1] shadow-inner">
+              <button
+                type="button"
+                onClick={() => setBookingScope('my')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  bookingScope === 'my'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">person</span>
+                <span>My Bookings</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 ml-0.5">
+                  {bookings.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBookingScope('all')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  bookingScope === 'all'
+                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-[0_0_12px_rgba(14,165,233,0.3)]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">groups</span>
+                <span>All Employees</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 ml-0.5">
+                  {(allBookings || []).length}
+                </span>
+              </button>
+            </div>
+          )}
+
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(14,165,233,0.4)] transition-all cursor-pointer"
@@ -118,7 +183,7 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
             <span>Total Passes</span>
             <span className="material-symbols-outlined text-xs text-sky-400">confirmation_number</span>
           </div>
-          <p className="text-2xl font-bold font-mono text-white mt-1">{bookings.length}</p>
+          <p className="text-2xl font-bold font-mono text-white mt-1">{effectiveBookings.length}</p>
           <span className="text-[11px] text-slate-400 mt-1 block">All registered bookings</span>
         </div>
 
@@ -157,7 +222,7 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
           <span className="material-symbols-outlined text-slate-400 text-sm">search</span>
           <input
             type="text"
-            placeholder="Search by code, seat, room, date, or attendee..."
+            placeholder={bookingScope === 'all' ? "Search by employee name, seat, room, date, or attendee..." : "Search by code, seat, room, date, or attendee..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-transparent text-xs text-white placeholder:text-slate-500 focus:outline-none"
@@ -184,7 +249,7 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              All ({bookings.length})
+              All ({effectiveBookings.length})
             </button>
             <button
               onClick={() => setTypeFilter('desks')}
@@ -262,10 +327,20 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
             <div className="w-16 h-16 rounded-2xl bg-white/[0.03] text-slate-500 flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-4xl">event_busy</span>
             </div>
-            <h3 className="text-base font-bold text-white">No Workstation Passes Found</h3>
+            <h3 className="text-base font-bold text-white">
+              {bookingScope === 'all'
+                ? 'No Employee Bookings Found'
+                : isAdminOrManager
+                ? 'No Allocations Found'
+                : 'No Workstation Passes Found'}
+            </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              {bookings.length === 0
-                ? "You haven't reserved any workstations yet. Choose a desk on the interactive Floor Plan Map to reserve your space."
+              {effectiveBookings.length === 0
+                ? (bookingScope === 'all'
+                    ? 'No employee reservations have been registered in the database yet.'
+                    : isAdminOrManager
+                    ? "You haven't allocated any workstations for employees yet. Choose a desk on the interactive Floor Plan Map to allocate seats."
+                    : "You haven't reserved any workstations yet. Choose a desk on the interactive Floor Plan Map to reserve your space.")
                 : 'No bookings match your selected filter criteria.'}
             </p>
             <button
@@ -313,6 +388,45 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
                       <span className="text-sm font-bold text-white font-mono truncate">
                         {isRoom ? (b.podName || b.deskId) : b.deskId}
                       </span>
+                    </div>
+
+                    {/* Employee Booker Info (Avatar, Name, Role) */}
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5 mb-1">
+                      <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex-shrink-0 ring-1 ring-white/20">
+                        {b.userAvatar ? (
+                          <img src={b.userAvatar} alt={b.userName || 'Employee'} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-white bg-sky-600">
+                            {(b.userName || 'E')[0]}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-slate-200">
+                        {b.userName || 'Employee'}
+                      </span>
+                      {b.userRole && (
+                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold uppercase ${
+                          b.userRole === 'admin'
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                            : b.userRole === 'manager'
+                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                            : 'bg-slate-500/20 text-slate-300 border border-slate-500/30'
+                        }`}>
+                          {b.userRole}
+                        </span>
+                      )}
+                      {b.userId && currentUser?.id === b.userId ? (
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 font-bold uppercase">
+                          You
+                        </span>
+                      ) : (
+                        isAdminOrManager && (b.bookedBy === currentUser?.id || b.isAllocatedByMe || bookingScope === 'my') && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-300 border border-sky-400/30 font-bold uppercase flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[11px]">assignment_ind</span>
+                            <span>Allocated by You</span>
+                          </span>
+                        )
+                      )}
 
                       {/* Office Campus Badge */}
                       <span
@@ -488,17 +602,19 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
       </div>
 
       {/* Footer Info */}
-      <div className="p-4 rounded-2xl bg-[#0c1017] border border-white/[0.08] flex flex-wrap justify-between items-center text-xs text-slate-400 gap-3">
-        <span className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-emerald-400 text-sm">sync</span>
-          Passes sync automatically with Microsoft Outlook & Google Calendar (.ics).
-        </span>
-        <button
-          onClick={onClose}
-          className="px-4 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs transition-all cursor-pointer"
-        >
-          Return to Floor Plan
-        </button>
+      <div className="sticky bottom-0 z-20 mt-auto pt-3">
+        <div className="p-4 rounded-2xl bg-[#0c1017]/95 border border-white/[0.1] flex flex-wrap justify-between items-center text-xs text-slate-300 gap-3 backdrop-blur-xl shadow-[0_-8px_25px_rgba(0,0,0,0.6)]">
+          <span className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-400 text-sm">sync</span>
+            Passes sync automatically with Microsoft Outlook & Google Calendar (.ics).
+          </span>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs transition-all cursor-pointer shadow-md shadow-sky-500/20"
+          >
+            Return to Floor Plan
+          </button>
+        </div>
       </div>
     </div>
   );

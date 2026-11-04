@@ -515,20 +515,22 @@ export const MeetingRoomsModal: React.FC<MeetingRoomsModalProps> = ({
         </div>
       )}
 
-      {/* Footer Info & Floor Plan Return Bar */}
-      <div className="p-4 rounded-2xl bg-[#0e1422]/90 border border-white/[0.08] flex flex-wrap justify-between items-center text-xs text-slate-400 gap-3 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-sm text-sky-400">info</span>
-          <span>
-            Meeting room reservations instantly update real-time occupancy across all floor plans.
-          </span>
+      {/* Footer Info & Floor Plan Return Bar (Sticky to bottom) */}
+      <div className="sticky bottom-0 z-20 mt-auto pt-3">
+        <div className="p-4 rounded-2xl bg-[#0e1422]/95 border border-white/[0.1] flex flex-wrap justify-between items-center text-xs text-slate-300 gap-3 backdrop-blur-xl shadow-[0_-8px_25px_rgba(0,0,0,0.6)]">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm text-sky-400">info</span>
+            <span>
+              Meeting room reservations instantly update real-time occupancy across all floor plans.
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs transition-all cursor-pointer shadow-md shadow-sky-500/20"
+          >
+            Return to Floor Plan
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs transition-all cursor-pointer shadow-md shadow-sky-500/20"
-        >
-          Return to Floor Plan
-        </button>
       </div>
 
       {/* ========================================================
@@ -695,7 +697,7 @@ export const MeetingRoomsModal: React.FC<MeetingRoomsModalProps> = ({
   if (isPageView) {
     return (
       <div className="w-full h-full overflow-y-auto bg-[#090D16] p-4 sm:p-6 lg:p-8 flex flex-col animate-in fade-in duration-150">
-        <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col pb-12">
+        <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col min-h-full pb-2">
           {content}
         </div>
       </div>

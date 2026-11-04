@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { api } from '../services/api';
 
@@ -17,12 +17,45 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onOpenSignUp,
   onOpenMicrosoftSSO
 }) => {
-  if (!isOpen) return null;
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Lock background scrolling and handle Escape key when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyPaddingRight = document.body.style.paddingRight;
+
+    // Compensate for scrollbar disappearing to prevent horizontal page shift
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.paddingRight = originalBodyPaddingRight;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,22 +73,33 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  const fillQuickDemo = (role: 'admin' | 'manager' | 'employee') => {
+  const fillQuickDemo = (demo: 'admin' | 'manager' | 'david' | 'priya' | 'marcus') => {
     setError(null);
-    if (role === 'admin') {
+    if (demo === 'admin') {
       setEmail('admin@smartdesk.com');
       setPassword('admin123');
-    } else if (role === 'manager') {
+    } else if (demo === 'manager') {
       setEmail('manager@smartdesk.com');
       setPassword('manager123');
-    } else {
+    } else if (demo === 'david') {
       setEmail('employee@smartdesk.com');
+      setPassword('user123');
+    } else if (demo === 'priya') {
+      setEmail('priya@smartdesk.com');
+      setPassword('user123');
+    } else if (demo === 'marcus') {
+      setEmail('marcus@smartdesk.com');
       setPassword('user123');
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-background/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 bg-background/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto overscroll-contain"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-surface-container border border-outline-variant/40 rounded-3xl w-full max-w-md p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30 mb-5">
           <div className="flex items-center gap-3">
@@ -163,23 +207,39 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <button
               type="button"
               onClick={() => fillQuickDemo('admin')}
-              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-primary font-medium text-center transition-all"
+              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-primary font-medium text-center transition-all cursor-pointer"
             >
               Admin Alex
             </button>
             <button
               type="button"
               onClick={() => fillQuickDemo('manager')}
-              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-secondary font-medium text-center transition-all"
+              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-secondary font-medium text-center transition-all cursor-pointer"
             >
               Manager Sarah
             </button>
             <button
               type="button"
-              onClick={() => fillQuickDemo('employee')}
-              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-tertiary font-medium text-center transition-all"
+              onClick={() => fillQuickDemo('david')}
+              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-tertiary font-medium text-center transition-all cursor-pointer"
             >
               User David
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => fillQuickDemo('priya')}
+              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-emerald-400 font-medium text-center transition-all cursor-pointer"
+            >
+              User Priya (QA)
+            </button>
+            <button
+              type="button"
+              onClick={() => fillQuickDemo('marcus')}
+              className="py-1.5 px-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-[11px] font-mono text-sky-400 font-medium text-center transition-all cursor-pointer"
+            >
+              User Marcus (Backend)
             </button>
           </div>
         </div>

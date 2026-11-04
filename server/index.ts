@@ -439,6 +439,8 @@ app.get('/api/desks', (req, res) => {
       if (d.booking_id) {
         status = 'booked';
         occupant = {
+          userId: d.occupant_id,
+          bookingId: d.booking_id,
           name: d.occupant_name,
           avatar: d.occupant_avatar,
           department: d.occupant_department,
@@ -844,8 +846,8 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
 
       // 1. Insert Booking Record
       db.prepare(`
-        INSERT INTO bookings (id, user_id, desk_id, room_id, area_id, desk_code, pod_name, booking_date, duration, start_time, end_time, status, check_in_status, cost, teams_meeting_url, attendees, office_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, ?, ?)
+        INSERT INTO bookings (id, user_id, desk_id, room_id, area_id, desk_code, pod_name, booking_date, duration, start_time, end_time, status, check_in_status, cost, teams_meeting_url, attendees, office_id, booked_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?, ?, ?, ?)
       `).run(
         bookingId,
         assignedUserId,
@@ -861,7 +863,8 @@ app.post('/api/bookings', authenticateToken, async (req: AuthRequest, res) => {
         costPerDay,
         teamsMeetingUrl,
         attendeesJson,
-        targetOfficeId
+        targetOfficeId,
+        callerUser.id
       );
 
       // 2. Insert Invited Attendees into booking_attendees junction table
@@ -976,15 +979,34 @@ app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
   const officeId = req.query.officeId as string;
   try {
     const currentUserId = req.user!.id;
+    const currentUserRole = req.user!.role;
+    const isManagerOrAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
+
     let sql = `
-      SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role,
-             CASE WHEN b.user_id = ? THEN 1 ELSE 0 END as is_organizer
+      SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role, u.department,
+             booker.name as booked_by_name, booker.role as booked_by_role,
+             CASE WHEN b.user_id = ? THEN 1 ELSE 0 END as is_organizer,
+             CASE WHEN (b.booked_by = ? OR (b.booked_by IS NULL AND ?)) THEN 1 ELSE 0 END as is_allocated_by_me
       FROM bookings b
       JOIN users u ON b.user_id = u.id
-      WHERE (b.user_id = ? OR b.id IN (SELECT booking_id FROM booking_attendees WHERE user_id = ?))
+      LEFT JOIN users booker ON b.booked_by = booker.id
+      WHERE (
+        b.user_id = ? 
+        OR b.booked_by = ? 
+        OR (? AND b.booked_by IS NULL)
+        OR b.id IN (SELECT booking_id FROM booking_attendees WHERE user_id = ?)
+      )
         AND b.status != 'cancelled'
     `;
-    const params: any[] = [currentUserId, currentUserId, currentUserId];
+    const params: any[] = [
+      currentUserId,
+      currentUserId,
+      isManagerOrAdmin ? 1 : 0,
+      currentUserId,
+      currentUserId,
+      isManagerOrAdmin ? 1 : 0,
+      currentUserId
+    ];
     if (officeId && officeId !== 'all') {
       sql += ' AND (b.office_id = ? OR b.office_id IS NULL)';
       params.push(officeId);
@@ -1015,6 +1037,11 @@ app.get('/api/bookings/my', authenticateToken, (req: AuthRequest, res) => {
         userName: b.user_name,
         userRole: b.user_role,
         userAvatar: b.user_avatar,
+        department: b.department,
+        bookedBy: b.booked_by,
+        bookedByName: b.booked_by_name,
+        bookedByRole: b.booked_by_role,
+        isAllocatedByMe: Boolean(b.is_allocated_by_me),
         checkInStatus: Boolean(b.check_in_status),
         cost: b.cost,
         teamsMeetingUrl: b.teams_meeting_url,
@@ -1036,9 +1063,11 @@ app.get('/api/bookings/all', (req: Request, res: Response) => {
 
   try {
     let sql = `
-      SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role, u.department
+      SELECT b.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role, u.department,
+             booker.name as booked_by_name, booker.role as booked_by_role
       FROM bookings b
       JOIN users u ON b.user_id = u.id
+      LEFT JOIN users booker ON b.booked_by = booker.id
     `;
     const params: any[] = [];
     if (officeId && officeId !== 'all') {
@@ -1073,6 +1102,9 @@ app.get('/api/bookings/all', (req: Request, res: Response) => {
         userRole: b.user_role,
         userAvatar: b.user_avatar,
         department: b.department,
+        bookedBy: b.booked_by,
+        bookedByName: b.booked_by_name,
+        bookedByRole: b.booked_by_role,
         checkInStatus: Boolean(b.check_in_status),
         cost: b.cost,
         teamsMeetingUrl: b.teams_meeting_url,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Role, OfficeLocation } from '../types';
 
-export type ActiveTab = 'floor-plan' | 'time-grid' | 'my-bookings' | 'meeting-rooms' | 'analytics' | 'admin-users' | 'admin-health';
+export type ActiveTab = 'floor-plan' | 'my-bookings' | 'meeting-rooms' | 'analytics' | 'admin-users' | 'admin-health';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -12,7 +12,6 @@ interface SidebarProps {
   selectedOffice?: OfficeLocation;
   onOpenOfficeModal?: () => void;
   onLogout?: () => void;
-  onNavigateLanding?: () => void;
   onCollapse?: () => void;
 }
 
@@ -25,7 +24,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedOffice = 'global-port',
   onOpenOfficeModal,
   onLogout,
-  onNavigateLanding,
   onCollapse
 }) => {
   const handleTabClick = (tab: ActiveTab) => {
@@ -55,38 +53,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className="w-full">
         <div
-          onClick={() => onNavigateLanding ? onNavigateLanding() : handleTabClick('floor-plan')}
+          onClick={() => handleTabClick('floor-plan')}
           className="w-full cursor-pointer group mb-5"
-          title="SmartDesk Workplace OS • Click to view Landing Page"
+          title="SmartDesk • Click to view Landing Page"
         >
           {isCollapsed ? (
             <div className="w-10 h-10 mx-auto rounded-xl bg-white p-1.5 flex items-center justify-center shadow-lg group-hover:scale-105 transition-all overflow-hidden border border-white/20">
               <img src="/harbinger-logo.webp" alt="Harbinger Group" className="w-full h-full object-contain" />
             </div>
           ) : (
-            <div className="rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-sky-500/30 p-2.5 shadow-lg transition-all flex flex-col gap-2 group-hover:shadow-[0_4px_20px_rgba(14,165,233,0.15)]">
-              {/* Top row: Harbinger Logo Badge on White + Live Status Pill */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="bg-white rounded-xl px-2.5 py-1.5 shadow-sm flex items-center justify-center border border-white/40">
-                  <img
-                    src="/harbinger-logo.webp"
-                    alt="Harbinger Group"
-                    className="h-5.5 w-auto object-contain max-w-[130px]"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-semibold whitespace-nowrap">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
-                  <span>LIVE</span>
-                </div>
+            <div className="flex items-center gap-3 px-1 py-1 group-hover:opacity-90 transition-opacity">
+              <div className="bg-white rounded-xl px-2.5 py-1.5 shadow-sm flex items-center justify-center border border-white/40 flex-shrink-0 group-hover:scale-105 transition-all">
+                <img
+                  src="/harbinger-logo.webp"
+                  alt="Harbinger Group"
+                  className="h-6 w-auto object-contain"
+                />
               </div>
-
-              {/* Bottom row: SmartDesk Workspace OS Subtitle */}
-              <div className="flex items-center justify-between px-1 pt-1.5 border-t border-white/[0.06] text-xs">
-                <span className="font-bold text-white tracking-tight">SmartDesk</span>
-                <span className="text-[10px] text-sky-400 font-mono font-semibold uppercase tracking-wider">
-                  Workspace OS
-                </span>
-              </div>
+              <span className="font-bold text-white text-base tracking-tight group-hover:text-sky-300 transition-colors">
+                SmartDesk
+              </span>
             </div>
           )}
         </div>
@@ -135,21 +121,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation Tabs */}
         <nav className="space-y-1 w-full">
-          {/* Landing Page Home Link */}
-          {onNavigateLanding && (
-            <button
-              onClick={onNavigateLanding}
-              title="Landing Page / Home"
-              className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-              } text-slate-400 hover:text-sky-300 hover:bg-white/[0.04] border border-transparent mb-1`}
-            >
-              <span className={`material-symbols-outlined text-[19px] ${!isCollapsed ? 'mr-3' : ''}`}>
-                home
-              </span>
-              {!isCollapsed && <span>Landing Page</span>}
-            </button>
-          )}
 
           {/* Floor Plan */}
           <button
@@ -167,24 +138,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               map
             </span>
             {!isCollapsed && <span>Floor Plan Map</span>}
-          </button>
-
-          {/* Time Grid */}
-          <button
-            onClick={() => handleTabClick('time-grid')}
-            title="Time Grid Scheduler"
-            className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer ${
-              isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-            } ${
-              activeTab === 'time-grid'
-                ? 'bg-sky-500/15 text-sky-300 border border-sky-400/30 shadow-[0_0_12px_rgba(14,165,233,0.15)] font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
-            }`}
-          >
-            <span className={`material-symbols-outlined text-[19px] ${!isCollapsed ? 'mr-3' : ''}`}>
-              schedule
-            </span>
-            {!isCollapsed && <span>Time Grid</span>}
           </button>
 
           {/* My Bookings */}
@@ -252,14 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className={`material-symbols-outlined text-[19px] ${!isCollapsed ? 'mr-3' : ''}`}>
                 analytics
               </span>
-              {!isCollapsed && (
-                <>
-                  <span>Workplace Analytics</span>
-                  <span className="ml-auto text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    PRO
-                  </span>
-                </>
-              )}
+              {!isCollapsed && <span>Workplace Analytics</span>}
             </button>
           )}
 
@@ -307,29 +253,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer Info & Actions */}
       <div className="w-full space-y-2">
-        {!isCollapsed && (
-          <div className="p-2.5 rounded-xl bg-black/40 border border-white/[0.06] flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
-              <span className="text-[11px] text-slate-300 font-medium">
-                Live SQLite
-              </span>
-            </div>
-            <span className="text-[10px] font-mono text-sky-400 font-semibold">
-              v2.5
-            </span>
-          </div>
-        )}
 
         {onLogout && (
           <button
             onClick={onLogout}
             title="Sign Out"
-            className={`w-full rounded-xl hover:bg-rose-500/15 text-rose-400 text-xs font-medium flex items-center transition-all cursor-pointer border border-transparent hover:border-rose-500/30 ${
-              isCollapsed ? 'justify-center p-2.5' : 'justify-center gap-2 py-2 px-3'
+            className={`w-full flex items-center rounded-xl text-xs font-medium transition-all cursor-pointer border border-transparent hover:border-rose-500/30 hover:bg-rose-500/15 text-rose-400 ${
+              isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
             }`}
           >
-            <span className="material-symbols-outlined text-base">logout</span>
+            <span className={`material-symbols-outlined text-[19px] ${!isCollapsed ? 'mr-3' : ''}`}>
+              logout
+            </span>
             {!isCollapsed && <span>Sign Out</span>}
           </button>
         )}

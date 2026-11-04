@@ -20,6 +20,9 @@ export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
 }) => {
   const isBooked = desk.status === 'booked';
   const isHold = desk.status === 'hold';
+  const isAdminOrManager = desk.userRole === 'admin' || desk.userRole === 'manager';
+  const isSelfBooked = Boolean(desk.isSelfBooked);
+  const isSearchMatch = Boolean(isHighlighted || desk.isSearchMatch);
 
   // Orientation determines where chair is rendered relative to desk
   const isFacingRight = desk.orientation === 'facing-right';
@@ -27,12 +30,15 @@ export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
   const isFacingUp = desk.orientation === 'facing-up';
   const isFacingDown = desk.orientation === 'facing-down';
 
-  // Base styling for the desk surface (High Visibility Color Scheme)
+  // Base styling for the desk surface:
+  // 1. FREE SEAT (Available) -> High-Visibility Vibrant Green for all users
   let containerStyle = "border-2 border-emerald-500 bg-[#0f172a] text-emerald-300 shadow-lg shadow-emerald-950/60 hover:border-emerald-300 hover:scale-110 hover:shadow-emerald-500/50";
   let statusDotColor = "bg-emerald-400 shadow-[0_0_10px_#34d399]";
   let statusTextColor = "text-emerald-300 font-black";
   let chairBg = "bg-[#1e293b] border-2 border-emerald-500/80 group-hover:border-emerald-400 shadow-md";
   let chairBackrest = "bg-emerald-400";
+  let isClickable = true;
+  let showHoverEffects = true;
 
   if (isSelected) {
     containerStyle = "border-2 border-white bg-blue-600 text-white shadow-[0_0_30px_#38bdf8] ring-4 ring-cyan-400 scale-125 z-40 font-black";
@@ -40,12 +46,37 @@ export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
     statusTextColor = "text-white font-black";
     chairBg = "bg-blue-900 border-2 border-white shadow-lg";
     chairBackrest = "bg-white";
+  } else if (isSearchMatch) {
+    // ⭐️ SEARCH HIGHLIGHT: Solid Radiant Yellow (Replaces dull/red pulsing)
+    containerStyle = "border-2 border-yellow-400 bg-[#352807] text-yellow-200 shadow-[0_0_28px_rgba(250,204,21,0.95)] ring-4 ring-yellow-400 scale-125 z-40 font-black";
+    statusDotColor = "bg-yellow-400 shadow-[0_0_12px_#facc15]";
+    statusTextColor = "text-yellow-200 font-black";
+    chairBg = "bg-[#423108] border-2 border-yellow-400 shadow-md";
+    chairBackrest = "bg-yellow-400";
+    isClickable = true;
+    showHoverEffects = true;
   } else if (isBooked) {
-    containerStyle = "border-2 border-rose-500 bg-[#221016] text-rose-300 shadow-md hover:border-rose-400 hover:scale-110";
-    statusDotColor = "bg-rose-500 shadow-[0_0_10px_#f43f5e]";
-    statusTextColor = "text-rose-300 font-bold";
-    chairBg = "bg-[#2d1720] border-2 border-rose-500/80 shadow-md";
-    chairBackrest = "bg-rose-400";
+    if (isAdminOrManager || isSelfBooked) {
+      // 2. RED VIEW for Manager/Admin OR Self-Booked by current user
+      containerStyle = isSelfBooked
+        ? "border-2 border-rose-500 bg-[#2b1219] text-rose-200 shadow-lg shadow-rose-950/60 ring-2 ring-rose-500/50 hover:border-rose-300 hover:scale-110 hover:shadow-[0_0_18px_rgba(244,63,94,0.5)]"
+        : "border-2 border-rose-500 bg-[#221016] text-rose-300 shadow-md hover:border-rose-400 hover:scale-110 hover:shadow-[0_0_15px_rgba(244,63,94,0.4)]";
+      statusDotColor = "bg-rose-500 shadow-[0_0_10px_#f43f5e]";
+      statusTextColor = isSelfBooked ? "text-rose-200 font-black" : "text-rose-300 font-bold";
+      chairBg = "bg-[#2d1720] border-2 border-rose-500/80 shadow-md";
+      chairBackrest = "bg-rose-400";
+      isClickable = true;
+    } else {
+      // 3. GREYISH VIEW for Employee viewing another user's booked seat (BookMyShow style)
+      // Muted grey tones, disabled cursor, NO scale/glow hover effects, NO popup
+      containerStyle = "border-2 border-zinc-700/80 bg-[#161a22] text-zinc-500 shadow-none opacity-60";
+      statusDotColor = "bg-zinc-600 border border-zinc-700";
+      statusTextColor = "text-zinc-500 font-bold";
+      chairBg = "bg-[#11141a] border-2 border-zinc-700/60 shadow-none";
+      chairBackrest = "bg-zinc-600";
+      isClickable = false;
+      showHoverEffects = false;
+    }
   } else if (isHold) {
     containerStyle = "border-2 border-amber-500 bg-[#241a0e] text-amber-300 shadow-md hover:border-amber-400 hover:scale-110";
     statusDotColor = "bg-amber-400 shadow-[0_0_10px_#fbbf24]";
@@ -54,15 +85,9 @@ export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
     chairBackrest = "bg-amber-400";
   }
 
-  if (isHighlighted) {
-    containerStyle += " ring-4 ring-cyan-400 animate-pulse z-40 scale-120";
-  }
+
 
   // Flex container layout based on facing direction
-  // facing-right: chair on left, desk on right (flex-row)
-  // facing-left: desk on left, chair on right (flex-row-reverse)
-  // facing-up: desk at top, chair at bottom (flex-col-reverse)
-  // facing-down: chair at top, desk at bottom (flex-col)
   const flexLayout = isFacingRight
     ? 'flex-row'
     : isFacingLeft
@@ -73,11 +98,29 @@ export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
 
   return (
     <div
-      className={`relative group flex items-center justify-center cursor-pointer select-none transition-transform duration-100 ${flexLayout}`}
-      onClick={() => onSelect(desk)}
-      onMouseEnter={(e) => onHover(desk, e)}
-      onMouseLeave={onLeave}
+      className={`relative flex items-center justify-center select-none transition-transform duration-100 ${
+        isClickable ? 'group cursor-pointer' : 'cursor-not-allowed pointer-events-auto'
+      } ${flexLayout}`}
+      onClick={() => {
+        if (!isClickable) return;
+        onSelect(desk);
+      }}
+      onMouseEnter={(e) => {
+        if (!isClickable) return;
+        onHover(desk, e);
+      }}
+      onMouseLeave={() => {
+        if (!isClickable) return;
+        onLeave();
+      }}
       data-desk-id={desk.id}
+      title={
+        !isClickable
+          ? `Seat ${desk.code} • Reserved (Unavailable)`
+          : isSelfBooked
+          ? `Seat ${desk.code} • Your Reserved Seat (Click for details)`
+          : undefined
+      }
     >
       {/* Front-and-Back Chair Graphic */}
       <div
@@ -92,7 +135,6 @@ export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
         } ${chairBg}`}
         title={`Chair (${desk.orientation || 'facing-down'})`}
       >
-        {/* Subtle chair backrest indicator */}
         <div
           className={`rounded-full ${
             isFacingRight || isFacingLeft
@@ -104,7 +146,9 @@ export const DeskNode: React.FC<DeskNodeProps> = React.memo(({
 
       {/* Desk Workstation Table Top */}
       <div
-        className={`w-11 h-11 rounded-lg border flex flex-col items-center justify-center relative shadow-sm group-hover:scale-105 transition-transform duration-100 ${containerStyle}`}
+        className={`w-11 h-11 rounded-lg border flex flex-col items-center justify-center relative shadow-sm ${
+          showHoverEffects ? 'group-hover:scale-105' : ''
+        } transition-transform duration-100 ${containerStyle}`}
       >
         {/* Desk Divider/Screen indicator at edge opposite to chair */}
         <div

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { OfficeLocation } from '../types';
 import { OFFICES, OFFICE_LIST } from '../data/officeConfig';
 
@@ -20,6 +20,38 @@ export const OfficeSelectionModal: React.FC<OfficeSelectionModalProps> = ({
   const [selected, setSelected] = useState<OfficeLocation>(currentOffice);
   const [rememberChoice, setRememberChoice] = useState<boolean>(true);
 
+  // Lock background scrolling and handle Escape key when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyPaddingRight = document.body.style.paddingRight;
+
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && canDismiss && onClose) {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.paddingRight = originalBodyPaddingRight;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, canDismiss]);
+
   if (!isOpen) return null;
 
   const handleConfirm = (officeId: OfficeLocation) => {
@@ -27,7 +59,6 @@ export const OfficeSelectionModal: React.FC<OfficeSelectionModalProps> = ({
       localStorage.setItem('smartdesk_selected_office', officeId);
     }
     onSelectOffice(officeId);
-    if (onClose) onClose();
   };
 
   return (
@@ -177,23 +208,6 @@ export const OfficeSelectionModal: React.FC<OfficeSelectionModalProps> = ({
                           : 'Blueprint Overlay Pending'}
                       </span>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleConfirm(office.id);
-                      }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                        isSelected
-                          ? isGlobalPort
-                            ? 'bg-sky-500 hover:bg-sky-400 text-white shadow-md shadow-sky-500/25'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-md shadow-emerald-500/25'
-                          : 'bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white border border-white/[0.1]'
-                      }`}
-                    >
-                      {isSelected ? 'Enter Campus' : 'Select'}
-                    </button>
                   </div>
                 </div>
               );
@@ -224,15 +238,6 @@ export const OfficeSelectionModal: React.FC<OfficeSelectionModalProps> = ({
           </label>
 
           <div className="flex items-center gap-2 ml-auto">
-            {canDismiss && onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-slate-300 hover:text-white text-xs font-semibold cursor-pointer transition-all"
-              >
-                Cancel
-              </button>
-            )}
             <button
               type="button"
               onClick={() => handleConfirm(selected)}

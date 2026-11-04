@@ -13,6 +13,8 @@ interface SiddhantWorkAreaMapProps {
   rooms?: Room[];
   selectedDesk: Desk | null;
   highlightedDeskId: string | null;
+  selectedFloorId?: SiddhantFloorId;
+  onFloorChange?: (floor: SiddhantFloorId) => void;
   onSelectDesk: (desk: Desk) => void;
   onHoverDesk: (desk: Desk, e: React.MouseEvent) => void;
   onLeaveDesk: () => void;
@@ -25,13 +27,17 @@ export const SiddhantWorkAreaMap: React.FC<SiddhantWorkAreaMapProps> = React.mem
   rooms = [],
   selectedDesk,
   highlightedDeskId,
+  selectedFloorId: propSelectedFloorId,
+  onFloorChange,
   onSelectDesk,
   onHoverDesk,
   onLeaveDesk,
   onSelectRoom
 }) => {
   // 5 Floor Map IDs corresponding exactly to: Legal Finance, Floor 2A, Floor 2B, Floor 3A, Ground B
-  const [selectedFloorId, setSelectedFloorId] = useState<SiddhantFloorId>('legal_finance');
+  const [internalFloorId, setInternalFloorId] = useState<SiddhantFloorId>('floor_2a');
+  const currentFloor = propSelectedFloorId || internalFloorId;
+  const setFloor = onFloorChange || setInternalFloorId;
   const [viewMode, setViewMode] = useState<'blueprint' | 'original'>('original');
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
 
@@ -41,12 +47,12 @@ export const SiddhantWorkAreaMap: React.FC<SiddhantWorkAreaMapProps> = React.mem
 
   // Normalized floor mapping (handles backward-compatibility IDs)
   const normalizedFloorId = useMemo(() => {
-    if (selectedFloorId === 'finance_legal') return 'legal_finance';
-    if (selectedFloorId === '2nd_floor_a_wing') return 'floor_2a';
-    if (selectedFloorId === '2nd_floor_b_wing') return 'floor_2b';
-    if (selectedFloorId === '3rd_floor_a_wing' || selectedFloorId === '3rd_floor_b_wing') return 'floor_3a';
-    return selectedFloorId;
-  }, [selectedFloorId]);
+    if (currentFloor === 'finance_legal') return 'legal_finance';
+    if (currentFloor === '2nd_floor_a_wing') return 'floor_2a';
+    if (currentFloor === '2nd_floor_b_wing') return 'floor_2b';
+    if (currentFloor === '3rd_floor_a_wing' || currentFloor === '3rd_floor_b_wing') return 'floor_3a';
+    return currentFloor;
+  }, [currentFloor]);
 
   const floorMeta = {
     legal_finance: {
@@ -116,7 +122,7 @@ export const SiddhantWorkAreaMap: React.FC<SiddhantWorkAreaMapProps> = React.mem
               <button
                 key={floor.id}
                 type="button"
-                onClick={() => setSelectedFloorId(floor.id)}
+                onClick={() => setFloor(floor.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs transition-all cursor-pointer ${
                   isActive
                     ? 'bg-emerald-500 text-slate-950 border border-emerald-300 font-black shadow-md shadow-emerald-500/30'

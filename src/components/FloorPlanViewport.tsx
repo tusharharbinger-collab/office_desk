@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Desk, Room, OfficeLocation } from '../types';
+import { Desk, Room, OfficeLocation, Role, UserProfile, Booking, SiddhantFloorId } from '../types';
 import { WorkArea1Map } from './WorkArea1Map';
 import { WorkArea2Map } from './WorkArea2Map';
 import { SiddhantWorkAreaMap } from './SiddhantWorkAreaMap';
@@ -12,10 +12,17 @@ interface FloorPlanViewportProps {
   rooms: Room[];
   selectedDesk: Desk | null;
   highlightedDeskId: string | null;
+  searchQuery?: string;
+  siddhantFloorId?: SiddhantFloorId;
+  onSiddhantFloorChange?: (floor: SiddhantFloorId) => void;
   scale?: number;
   onScaleChange?: (newScale: number) => void;
   onSelectDesk: (desk: Desk) => void;
   onSelectRoom: (room: Room) => void;
+  currentUser?: UserProfile | null;
+  userRole?: Role;
+  bookings?: Booking[];
+  selectedDate?: string;
 }
 
 export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
@@ -25,10 +32,17 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   rooms,
   selectedDesk,
   highlightedDeskId,
+  searchQuery = '',
+  siddhantFloorId,
+  onSiddhantFloorChange,
   scale: externalScale,
   onScaleChange,
   onSelectDesk,
-  onSelectRoom
+  onSelectRoom,
+  currentUser,
+  userRole,
+  bookings = [],
+  selectedDate
 }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +63,6 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   const animTimerRef = useRef<any>(null);
   const rafIdRef = useRef<number | null>(null);
 
-  const [showMinimap, setShowMinimap] = useState(false);
 
   // Track if user has manually panned/zoomed
   const isUserInteractedRef = useRef(false);
@@ -63,9 +76,109 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
   const touchStartDistRef = useRef<number | null>(null);
   const touchStartScaleRef = useRef<number>(internalScale);
 
+  // Search matches computed for all desks so all matching desks show vibrant Yellow
+  const effectiveDesks = React.useMemo(() => {
+    if (!searchQuery?.trim()) {
+      return desks.map((d) => (d.id === highlightedDeskId ? { ...d, isSearchMatch: true } : d));
+    }
+    const q = searchQuery.toLowerCase().trim();
+    return desks.map((d) => {
+      const isMatch = Boolean(
+        d.id === highlightedDeskId ||
+        d.id.toLowerCase().includes(q) ||
+        d.code.toLowerCase() === q ||
+        d.code.toLowerCase().includes(q) ||
+        (d.occupant && d.occupant.name.toLowerCase().includes(q))
+      );
+      return isMatch ? { ...d, isSearchMatch: true } : d;
+    });
+  }, [desks, searchQuery, highlightedDeskId]);
+
+  const searchAnchorDeskIdRef = useRef<string | null>(null);
+
+  // Automatic camera pan & popup opening for Admin / Manager upon search match
+  useEffect(() => {
+    if (!highlightedDeskId && (!searchQuery || !searchQuery.trim())) {
+      if (searchAnchorDeskIdRef.current) {
+        setHoveredDesk(null);
+        searchAnchorDeskIdRef.current = null;
+      }
+      return;
+    }
+
+    const targetDesk = effectiveDesks.find((d) => d.id === highlightedDeskId || d.isSearchMatch);
+    if (!targetDesk) return;
+
+    searchAnchorDeskIdRef.current = targetDesk.id;
+
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-desk-id="${targetDesk.id}"]`);
+      if (el && viewportRef.current) {
+        const rect = el.getBoundingClientRect();
+        const vRect = viewportRef.current.getBoundingClientRect();
+
+        const isOutOfView =
+          rect.top < vRect.top + 80 ||
+          rect.bottom > vRect.bottom - 80 ||
+          rect.left < vRect.left + 80 ||
+          rect.right > vRect.right - 80;
+
+        if (isOutOfView) {
+          const deskCenterX = rect.left + rect.width / 2;
+          const deskCenterY = rect.top + rect.height / 2;
+          const viewportCenterX = vRect.left + vRect.width / 2;
+          const viewportCenterY = vRect.top + vRect.height / 2;
+
+          const dx = viewportCenterX - deskCenterX;
+          const dy = viewportCenterY - deskCenterY;
+
+          setPan((p) => {
+            const nextX = p.x + dx;
+            const nextY = p.y + dy;
+            panRef.current = { x: nextX, y: nextY };
+            return { x: nextX, y: nextY };
+          });
+        }
+
+        setTimeout(() => {
+          const freshEl = document.querySelector(`[data-desk-id="${targetDesk.id}"]`);
+          if (!freshEl) return;
+          const fRect = freshEl.getBoundingClientRect();
+
+          let popupX = fRect.right + 14;
+          if (popupX + 300 > window.innerWidth - 20) {
+            popupX = Math.max(10, fRect.left - 300 - 14);
+          }
+          let popupY = fRect.top - 20;
+          if (popupY < 80) popupY = 80;
+          if (popupY + 280 > window.innerHeight) {
+            popupY = Math.max(80, window.innerHeight - 290);
+          }
+
+          const isManagerOrAdminRole = userRole === 'admin' || userRole === 'manager';
+          const isSelf = Boolean(
+            targetDesk.isSelfBooked ||
+            (targetDesk.occupant?.userId && currentUser?.id && targetDesk.occupant.userId === currentUser.id) ||
+            (targetDesk.occupant?.name && currentUser?.name && targetDesk.occupant.name.toLowerCase() === currentUser.name.toLowerCase())
+          );
+
+          if (isManagerOrAdminRole || isSelf) {
+            setHoveredDesk(targetDesk);
+            setTooltipPos({ x: popupX, y: popupY });
+          }
+        }, isOutOfView ? 240 : 0);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [highlightedDeskId, searchQuery, effectiveDesks, userRole, currentUser]);
+
   // Counts for status legend
+  const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
   const availableCount = desks.filter((d) => d.status === 'available').length;
   const bookedCount = desks.filter((d) => d.status === 'booked').length;
+  const selfBookedCount = desks.filter((d) => d.status === 'booked' && d.isSelfBooked).length;
+  const otherBookedCount = Math.max(0, bookedCount - selfBookedCount);
 
   // Optimized blueprint dimensions based on active floor plan and office
   const mapW = selectedOffice === 'siddhant' ? 1420 : (activeArea === 'area-1' ? 1180 : 1380);
@@ -447,37 +560,28 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
 
   // Hover handlers (Optimized to avoid re-rendering whole canvas on every mousemove)
   const handleHoverDesk = useCallback((desk: Desk, e: React.MouseEvent) => {
+    if (desk.status === 'booked') {
+      const isSelf = Boolean(
+        desk.isSelfBooked ||
+        (desk.occupant?.userId && currentUser?.id && desk.occupant.userId === currentUser.id) ||
+        (desk.occupant?.name && currentUser?.name && desk.occupant.name.toLowerCase() === currentUser.name.toLowerCase()) ||
+        bookings.some(b => b.deskId === desk.id && b.status === 'active' && b.date === selectedDate)
+      );
+      const isManagerOrAdmin = userRole === 'admin' || userRole === 'manager';
+
+      // For regular employee: someone else's booked seat has NO popup!
+      if (!isManagerOrAdmin && !isSelf) {
+        setHoveredDesk(null);
+        return;
+      }
+    }
     setHoveredDesk(desk);
     setTooltipPos({ x: e.clientX, y: e.clientY });
-  }, []);
+  }, [currentUser, userRole, bookings, selectedDate]);
 
   const handleLeaveDesk = useCallback(() => {
     setHoveredDesk(null);
   }, []);
-
-  // Minimap indicator calculations
-  const vpWidth = viewportRef.current?.clientWidth || 1000;
-  const vpHeight = viewportRef.current?.clientHeight || 700;
-  const mmWidth = 160;
-  const mmHeight = (mmWidth * mapH) / mapW;
-
-  const indW = Math.max(16, Math.min(mmWidth, (vpWidth / (mapW * internalScale)) * mmWidth));
-  const indH = Math.max(12, Math.min(mmHeight, (vpHeight / (mapH * internalScale)) * mmHeight));
-  const indX = Math.max(0, Math.min(mmWidth - indW, (-pan.x / (mapW * internalScale)) * mmWidth));
-  const indY = Math.max(0, Math.min(mmHeight - indH, (-pan.y / (mapH * internalScale)) * mmHeight));
-
-  // Minimap click to pan
-  const handleMinimapClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    const bpX = (clickX / mmWidth) * mapW;
-    const bpY = (clickY / mmHeight) * mapH;
-    const newPanX = Math.round(vpWidth / 2 - bpX * internalScale);
-    const newPanY = Math.round(vpHeight / 2 - bpY * internalScale);
-    const clamped = clampPan(newPanX, newPanY, internalScale);
-    triggerAnimatedTransform(clamped, internalScale);
-  };
 
   return (
     <div
@@ -508,10 +612,12 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
         {selectedOffice === 'siddhant' ? (
           <SiddhantWorkAreaMap
             activeArea={activeArea}
-            desks={desks}
+            desks={effectiveDesks}
             rooms={rooms}
             selectedDesk={selectedDesk}
             highlightedDeskId={highlightedDeskId}
+            selectedFloorId={siddhantFloorId}
+            onFloorChange={onSiddhantFloorChange}
             onSelectDesk={onSelectDesk}
             onHoverDesk={handleHoverDesk}
             onLeaveDesk={handleLeaveDesk}
@@ -519,7 +625,7 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
           />
         ) : activeArea === 'area-1' ? (
           <WorkArea1Map
-            desks={desks}
+            desks={effectiveDesks}
             rooms={rooms}
             selectedDesk={selectedDesk}
             highlightedDeskId={highlightedDeskId}
@@ -530,7 +636,7 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
           />
         ) : (
           <WorkArea2Map
-            desks={desks}
+            desks={effectiveDesks}
             rooms={rooms}
             selectedDesk={selectedDesk}
             highlightedDeskId={highlightedDeskId}
@@ -549,21 +655,28 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
       {!selectedDesk && (
         <div className="absolute bottom-5 left-5 z-20 hidden xs:flex sm:flex items-center gap-2.5 sm:gap-3.5 bg-[#0B0F17]/90 backdrop-blur-xl border border-white/[0.08] px-3.5 py-2 rounded-xl shadow-xl pointer-events-none text-[11px] sm:text-xs text-slate-300 font-medium font-mono">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            <span>Available ({availableCount})</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+            <span>Free ({availableCount})</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
-            <span>Selected</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_#fb7185]" />
-            <span>Occupied ({bookedCount})</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-            <span>Hold</span>
-          </div>
+          {isAdminOrManager ? (
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
+              <span>Booked ({bookedCount})</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-zinc-600 border border-zinc-500" />
+                <span>Booked ({otherBookedCount})</span>
+              </div>
+              {selfBookedCount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
+                  <span>Your Pass ({selfBookedCount})</span>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -625,63 +738,8 @@ export const FloorPlanViewport: React.FC<FloorPlanViewportProps> = ({
           <span className="text-[11px] font-medium">Fit All</span>
         </button>
 
-        {/* Minimap Toggle */}
-        <button
-          type="button"
-          onClick={() => setShowMinimap(!showMinimap)}
-          className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${
-            showMinimap
-              ? 'bg-sky-500/15 text-sky-300 border border-sky-400/30 shadow-sm font-semibold'
-              : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white'
-          }`}
-          title="Toggle Minimap"
-        >
-          <span className="material-symbols-outlined text-base">map</span>
-          <span className="hidden md:inline text-[11px] font-medium">Map</span>
-        </button>
+
       </div>
-
-      {/* Floating Pop-over Minimap */}
-      {showMinimap && (
-        <div className="absolute bottom-16 right-5 z-30 w-48 bg-surface-container-high/95 backdrop-blur-2xl border border-outline-variant/40 rounded-2xl p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex justify-between items-center text-[10px] text-outline uppercase font-mono pb-1.5 border-b border-outline-variant/20 mb-2">
-            <span className="flex items-center gap-1 font-semibold text-primary">
-              <span className="material-symbols-outlined text-xs">map</span>
-              <span>Floor Overview</span>
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span>{activeArea === 'area-1' ? 'WA-1 (130)' : 'WA-2 (80)'}</span>
-              <button
-                type="button"
-                onClick={() => setShowMinimap(false)}
-                className="w-4 h-4 rounded-full bg-surface-container hover:bg-surface-container-highest text-outline flex items-center justify-center cursor-pointer text-[10px]"
-                title="Hide Minimap"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          <div
-            className="relative bg-surface-container-lowest/90 rounded-lg border border-outline-variant/30 overflow-hidden mx-auto cursor-pointer"
-            style={{ width: `${mmWidth}px`, height: `${mmHeight}px` }}
-            onClick={handleMinimapClick}
-            title="Click anywhere to pan"
-          >
-            {/* Viewport Frustum Box */}
-            <div
-              className="absolute border border-primary bg-primary/20 rounded shadow-sm pointer-events-none"
-              style={{
-                left: `${indX}px`,
-                top: `${indY}px`,
-                width: `${indW}px`,
-                height: `${indH}px`,
-                transition: isAnimating ? 'all 240ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none'
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

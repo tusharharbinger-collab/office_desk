@@ -13,19 +13,53 @@ export const MicrosoftSSOModal: React.FC<MicrosoftSSOModalProps> = ({
   onClose,
   onSuccess
 }) => {
-  if (!isOpen) return null;
-
   const [msEmail, setMsEmail] = useState('');
+
+
+  // Lock background scrolling and handle Escape key when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyPaddingRight = document.body.style.paddingRight;
+
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.paddingRight = originalBodyPaddingRight;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
 
   useEffect(() => {
+    if (!isOpen) return;
     api.getMicrosoftConfig().then((cfg) => {
       setIsConfigured(cfg.configured);
     });
-  }, []);
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleMicrosoftSignIn = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
